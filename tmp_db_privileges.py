@@ -6,7 +6,9 @@ import database
 
 
 async def main():
+ async def main():
     database.init_database()
+    assert database.engine is not None, "Database engine failed to initialize"
     async with database.engine.connect() as conn:
         result = await conn.execute(
             text(
