@@ -7,6 +7,7 @@ import time
 from collections import defaultdict, deque
 from dataclasses import dataclass
 from typing import Protocol
+from urllib.parse import urlsplit
 
 import redis.asyncio as redis
 from redis.exceptions import RedisError
@@ -258,6 +259,46 @@ def _limited_response(result: RateLimitResult) -> JSONResponse:
     )
 
 
+def normalize_origin(value: str) -> str:
+    raw_value = value.strip().rstrip("/")
+    if not raw_value:
+        return ""
+    if "://" not in raw_value:
+        raw_value = f"https://{raw_value}"
+
+    parsed = urlsplit(raw_value)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        return ""
+
+    host = (parsed.hostname or "").lower()
+    if not host:
+        return ""
+
+    port = f":{parsed.port}" if parsed.port is not None else ""
+    return f"{parsed.scheme.lower()}://{host}{port}"
+
+
+def configured_origin_values() -> set[str]:
+    origins: set[str] = set()
+    origins.update(
+        origin.strip()
+        for origin in os.getenv("CORS_ORIGINS", "").split(",")
+        if origin.strip()
+    )
+
+    for env_name in (
+        "FRONTEND_URL",
+        "OAUTH_REDIRECT_BASE_URL",
+        "VERCEL_URL",
+        "VERCEL_BRANCH_URL",
+        "VERCEL_PROJECT_PRODUCTION_URL",
+    ):
+        value = os.getenv(env_name, "").strip()
+        if value:
+            origins.add(value)
+    return origins
+
+
 def allowed_browser_origins() -> set[str]:
     origins: set[str] = set()
     if os.getenv("ENV", "development").lower() != "production":
@@ -269,15 +310,20 @@ def allowed_browser_origins() -> set[str]:
                 "http://127.0.0.1:5174",
             }
         )
-    origins.update(
-        origin.strip()
-        for origin in os.getenv("CORS_ORIGINS", "").split(",")
-        if origin.strip()
-    )
-    frontend_url = os.getenv("FRONTEND_URL", "").strip()
-    if frontend_url:
-        origins.add(frontend_url)
-    return origins
+    origins.update(configured_origin_values())
+    return {
+        normalized
+        for origin in origins
+        if (normalized := normalize_origin(origin))
+    }
+
+
+def request_origin(request: Request) -> str:
+    forwarded_proto = request.headers.get("x-forwarded-proto", "").split(",", 1)[0].strip()
+    forwarded_host = request.headers.get("x-forwarded-host", "").split(",", 1)[0].strip()
+    scheme = forwarded_proto or request.url.scheme
+    host = forwarded_host or request.headers.get("host") or request.url.netloc
+    return normalize_origin(f"{scheme}://{host}")
 
 
 async def enforce_auth_identifier_limit(identifier: str, action: str) -> None:
@@ -369,13 +415,17 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             return None
         if AUTH_COOKIE_NAME not in request.cookies:
             return None
-        origin = request.headers.get("origin")
-        if not origin or origin not in allowed_browser_origins():
-            return JSONResponse(
-                status_code=status.HTTP_403_FORBIDDEN,
-                content={"detail": "Request origin is not allowed."},
-            )
-        return None
+        origin = normalize_origin(request.headers.get("origin", ""))
+        allowed_origins = allowed_browser_origins()
+        if origin and (
+            origin == request_origin(request)
+            or origin in allowed_origins
+        ):
+            return None
+        return JSONResponse(
+            status_code=status.HTTP_403_FORBIDDEN,
+            content={"detail": "Request origin is not allowed."},
+        )
 
     async def _validate_request_size(self, request: Request) -> JSONResponse | None:
         content_encoding = request.headers.get("content-encoding", "identity").lower()

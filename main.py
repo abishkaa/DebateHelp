@@ -14,6 +14,7 @@ from models import User as _UserModel  # noqa: F401 - registers ORM metadata.
 from routers import auth, chat, product
 from security import (
     SecurityMiddleware,
+    allowed_browser_origins,
     close_rate_limiter,
     validate_rate_limit_configuration,
 )
@@ -44,23 +45,7 @@ app = FastAPI(
 
 
 def get_allowed_origins() -> list[str]:
-    defaults = []
-    if os.getenv("ENV", "development").lower() != "production":
-        defaults = [
-            "http://localhost:5173",
-            "http://127.0.0.1:5173",
-            "http://localhost:5174",
-            "http://127.0.0.1:5174",
-        ]
-    configured = [
-        origin.strip()
-        for origin in os.getenv("CORS_ORIGINS", "").split(",")
-        if origin.strip()
-    ]
-    frontend_url = os.getenv("FRONTEND_URL", "").strip()
-    if frontend_url:
-        configured.append(frontend_url)
-    origins = list(dict.fromkeys([*defaults, *configured]))
+    origins = sorted(allowed_browser_origins())
     if "*" in origins:
         raise RuntimeError("Wildcard CORS origins cannot be used with credentials.")
     return origins
