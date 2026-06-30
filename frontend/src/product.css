@@ -7714,6 +7714,12 @@ body {
   border-width: 2px;
 }
 
+.auth-alert-actions button {
+  border-color: rgba(255, 139, 232, 0.56);
+  background: rgba(255, 139, 232, 0.1);
+  color: var(--chaos-pink);
+}
+
 .product-shell {
   grid-template-columns: 264px minmax(0, 1fr);
 }

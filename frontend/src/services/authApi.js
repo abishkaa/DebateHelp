@@ -16,6 +16,7 @@ function oauthStartUrl(provider) {
 function errorMessage(data, fallback) {
   if (typeof data.detail === 'string') return data.detail
   if (Array.isArray(data.detail) && data.detail[0]?.message) return data.detail[0].message
+  if (Array.isArray(data.detail) && data.detail[0]?.msg) return data.detail[0].msg
   return data.message || fallback
 }
 

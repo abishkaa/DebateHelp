@@ -47,7 +47,7 @@ function Signup({ navigateTo }) {
       const response = await signup(form)
       routeAfterAuth(response.user, navigateTo)
     } catch (err) {
-      setErrors({ form: err.message })
+      setErrors({ form: normalizeSignupError(err.message) })
     } finally {
       setLoading(false)
     }
@@ -76,7 +76,21 @@ function Signup({ navigateTo }) {
       )}
     >
       <form className="auth-form" onSubmit={handleSubmit}>
-        {errors.form && <div className="auth-alert error">{errors.form}</div>}
+        {errors.form && (
+          <div className="auth-alert error">
+            <span>{errors.form}</span>
+            {isExistingAccountError(errors.form) && (
+              <div className="auth-alert-actions">
+                <button type="button" onClick={() => navigateTo('/login')}>
+                  Log in
+                </button>
+                <button type="button" onClick={() => navigateTo(`/forgot-password?email=${encodeURIComponent(form.email.trim())}`)}>
+                  Reset password
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         <AuthFormInput
           autoComplete="name"
@@ -170,6 +184,17 @@ function validateSignup(form) {
     errors.confirm_password = 'Passwords do not match.'
   }
   return errors
+}
+
+function normalizeSignupError(message = '') {
+  if (message.includes('Unable to create an account with those details')) {
+    return 'An account with this email already exists. Sign in instead, or reset your password if you forgot it.'
+  }
+  return message || 'Unable to create an account. Please check your details and try again.'
+}
+
+function isExistingAccountError(message = '') {
+  return message.toLowerCase().includes('account with this email already exists')
 }
 
 export default Signup

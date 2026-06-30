@@ -339,7 +339,7 @@ async def create_user(db: AsyncSession | None, request: SignupRequest) -> tuple[
     if existing:
         hash_password(request.password)
         raise auth_error(
-            "Unable to create an account with those details.",
+            "An account with this email already exists. Sign in instead, or reset your password if you forgot it.",
             status.HTTP_409_CONFLICT,
         )
 

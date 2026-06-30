@@ -797,6 +797,27 @@ h2 {
   color: var(--green);
 }
 
+.auth-alert-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.auth-alert-actions button {
+  min-height: 34px;
+  padding: 0 12px;
+  cursor: pointer;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
 .auth-note {
   color: #d7d5cf;
 }
