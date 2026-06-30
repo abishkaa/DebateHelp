@@ -37,11 +37,22 @@ const COMMANDS = [
   { label: 'Open team', detail: 'Review shared arguments', path: '/app/team', icon: Users },
 ]
 
+const HUD_TABS = [
+  { label: 'Sessions', path: '/app/history', activePath: '/app/history' },
+  { label: 'Sources', path: '/app/analyze?focus=sources', activePath: '/app/analyze' },
+  { label: 'Coaching', path: '/app/live?focus=coach', activePath: '/app/live' },
+  { label: 'Reports', path: '/app/reports', activePath: '/app/reports' },
+]
+
 function pathIsActive(currentPath, itemPath) {
   if (itemPath === '/app') {
     return currentPath === '/app'
   }
   return currentPath.startsWith(itemPath)
+}
+
+function hudTabIsActive(currentPath, activePath) {
+  return currentPath.startsWith(activePath)
 }
 
 function ProductShell({
@@ -195,10 +206,17 @@ function ProductShell({
           </button>
 
           <div className="product-hud-tabs" aria-label="War Room status">
-            <span>Sessions</span>
-            <span>Sources</span>
-            <span>Coaching</span>
-            <span>Reports</span>
+            {HUD_TABS.map((tab) => (
+              <button
+                aria-current={hudTabIsActive(currentPath, tab.activePath) ? 'page' : undefined}
+                className={hudTabIsActive(currentPath, tab.activePath) ? 'active' : ''}
+                key={tab.label}
+                type="button"
+                onClick={() => navigateTo(tab.path)}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
 
           <div className="product-top-actions">

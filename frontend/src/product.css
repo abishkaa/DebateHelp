@@ -10817,3 +10817,165 @@ body,
     min-height: 136px !important;
   }
 }
+
+.product-hud-tabs button {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 24px !important;
+  padding: 2px 9px !important;
+  cursor: pointer !important;
+  border: 1px solid rgba(168, 255, 56, 0.36) !important;
+  border-radius: 999px !important;
+  background: rgba(168, 255, 56, 0.08) !important;
+  color: var(--stitch-lime) !important;
+  font-family: "Space Mono", "JetBrains Mono", monospace !important;
+  font-size: 0.66rem !important;
+  font-weight: 800 !important;
+  line-height: 1 !important;
+  letter-spacing: -0.04em !important;
+  text-transform: uppercase !important;
+  white-space: nowrap !important;
+  box-shadow: 0 0 18px rgba(168, 255, 56, 0.08) !important;
+}
+
+.product-hud-tabs button:hover,
+.product-hud-tabs button:focus-visible,
+.product-hud-tabs button.active {
+  border-color: rgba(0, 245, 255, 0.62) !important;
+  background: rgba(0, 245, 255, 0.13) !important;
+  color: var(--stitch-cyan) !important;
+  outline: none !important;
+}
+
+.team-modal-backdrop {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 95 !important;
+  display: grid !important;
+  place-items: center !important;
+  padding: 18px !important;
+  background: rgba(5, 5, 10, 0.68) !important;
+  backdrop-filter: blur(14px) !important;
+}
+
+.team-modal {
+  width: min(520px, 100%) !important;
+  overflow: hidden !important;
+  border: 2px solid rgba(0, 245, 255, 0.52) !important;
+  border-radius: 24px !important;
+  background:
+    radial-gradient(circle at 92% 0%, rgba(255, 139, 232, 0.18), transparent 15rem),
+    rgba(12, 12, 20, 0.96) !important;
+  box-shadow:
+    0 0 72px rgba(0, 245, 255, 0.22),
+    10px 10px 0 rgba(255, 24, 218, 0.25) !important;
+}
+
+.team-modal header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  padding: 16px 18px !important;
+  border-bottom: 1px solid rgba(255, 139, 232, 0.28) !important;
+}
+
+.team-modal header span,
+.team-modal header button {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  color: var(--stitch-cyan) !important;
+  font-family: "Space Mono", "JetBrains Mono", monospace !important;
+  font-size: 0.76rem !important;
+  font-weight: 900 !important;
+  text-transform: uppercase !important;
+}
+
+.team-modal header button {
+  justify-content: center !important;
+  width: 34px !important;
+  height: 34px !important;
+  cursor: pointer !important;
+  border: 1px solid rgba(255, 139, 232, 0.35) !important;
+  border-radius: 12px !important;
+  background: rgba(255, 139, 232, 0.08) !important;
+}
+
+.team-invite-form,
+.collaborative-editor {
+  display: grid !important;
+  gap: 14px !important;
+  padding: 16px 18px 18px !important;
+}
+
+.team-invite-form label,
+.collaborative-editor label {
+  display: grid !important;
+  gap: 7px !important;
+  color: var(--stitch-cyan) !important;
+  font-family: "Space Mono", "JetBrains Mono", monospace !important;
+  font-size: 0.68rem !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.02em !important;
+  text-transform: uppercase !important;
+}
+
+.team-invite-form input,
+.team-invite-form select,
+.collaborative-editor textarea {
+  width: 100% !important;
+  border: 1px solid rgba(255, 139, 232, 0.42) !important;
+  border-radius: 16px !important;
+  background: rgba(8, 8, 12, 0.88) !important;
+  color: var(--stitch-text) !important;
+  font: 600 0.9rem/1.5 Inter, system-ui, sans-serif !important;
+  outline: none !important;
+}
+
+.team-invite-form input,
+.team-invite-form select {
+  min-height: 48px !important;
+  padding: 0 13px !important;
+}
+
+.collaborative-editor {
+  margin: 12px 14px 4px !important;
+  padding: 14px !important;
+  border: 1px solid rgba(0, 245, 255, 0.28) !important;
+  border-radius: 20px !important;
+  background: rgba(0, 245, 255, 0.05) !important;
+}
+
+.collaborative-editor textarea {
+  min-height: 190px !important;
+  resize: vertical !important;
+  padding: 13px !important;
+}
+
+.team-invite-form input:focus,
+.team-invite-form select:focus,
+.collaborative-editor textarea:focus {
+  border-color: rgba(0, 245, 255, 0.68) !important;
+  box-shadow: 0 0 0 4px rgba(0, 245, 255, 0.1) !important;
+}
+
+.team-invite-actions,
+.collaborative-editor-actions {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 10px !important;
+  justify-content: flex-end !important;
+}
+
+.team-action-status {
+  margin: 0 !important;
+  padding: 10px 12px !important;
+  border: 1px solid rgba(168, 255, 56, 0.34) !important;
+  border-radius: 14px !important;
+  background: rgba(168, 255, 56, 0.08) !important;
+  color: var(--stitch-lime) !important;
+  font-family: "Space Mono", "JetBrains Mono", monospace !important;
+  font-size: 0.72rem !important;
+}

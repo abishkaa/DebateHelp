@@ -34,7 +34,7 @@ const SCRIPT = [
   },
 ]
 
-function LiveDebatePage({ token }) {
+function LiveDebatePage({ currentPath = '', token }) {
   const [running, setRunning] = useState(false)
   const [elapsed, setElapsed] = useState(0)
   const [visibleCount, setVisibleCount] = useState(1)
@@ -44,6 +44,7 @@ function LiveDebatePage({ token }) {
   const [liveAnalysis, setLiveAnalysis] = useState('')
   const [analyzing, setAnalyzing] = useState(false)
   const intervalRef = useRef(null)
+  const coachNoteRef = useRef(null)
 
   useEffect(() => {
     if (!running) return undefined
@@ -53,6 +54,14 @@ function LiveDebatePage({ token }) {
     }, 2200)
     return () => window.clearInterval(intervalRef.current)
   }, [running])
+
+  useEffect(() => {
+    if (!currentPath.includes('focus=coach')) return
+    const frameId = window.requestAnimationFrame(() => {
+      coachNoteRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    })
+    return () => window.cancelAnimationFrame(frameId)
+  }, [currentPath])
 
   const transcript = useMemo(
     () => [...SCRIPT.slice(0, visibleCount), ...customEntries],
@@ -193,7 +202,7 @@ function LiveDebatePage({ token }) {
             <small>{liveAnalysis ? 'Generated from the latest statement' : 'Confidence 86% - based on the current exchange'}</small>
           </article>
 
-          <article className="product-panel live-coach-note">
+          <article className="product-panel live-coach-note" data-product-focus="coach" ref={coachNoteRef}>
             <PanelHeading title="Coach note" />
             <p>Ask Speaker B to define which compliance costs are uniquely caused by audits and provide a comparison against existing product certification regimes.</p>
           </article>

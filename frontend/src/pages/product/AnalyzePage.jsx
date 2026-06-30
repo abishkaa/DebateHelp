@@ -26,7 +26,7 @@ const TRACE_STEPS = [
 
 const DEFAULT_ARGUMENT = 'Universal healthcare ensures that every citizen has access to essential medical services regardless of income, leading to a healthier population and a stronger society.'
 
-function AnalyzePage({ onExport, token }) {
+function AnalyzePage({ currentPath = '', onExport, token }) {
   const [argument, setArgument] = useState(DEFAULT_ARGUMENT)
   const [loading, setLoading] = useState(false)
   const [traceIndex, setTraceIndex] = useState(TRACE_STEPS.length)
@@ -34,8 +34,17 @@ function AnalyzePage({ onExport, token }) {
   const [reply, setReply] = useState('')
   const [completedAt, setCompletedAt] = useState('')
   const timerRef = useRef(null)
+  const sourcesRef = useRef(null)
 
   useEffect(() => () => window.clearInterval(timerRef.current), [])
+
+  useEffect(() => {
+    if (!currentPath.includes('focus=sources')) return
+    const frameId = window.requestAnimationFrame(() => {
+      sourcesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    })
+    return () => window.cancelAnimationFrame(frameId)
+  }, [currentPath])
 
   const runAnalysis = async () => {
     const submitted = argument.trim()
@@ -189,7 +198,7 @@ function AnalyzePage({ onExport, token }) {
         </article>
 
         <div className="analysis-side-stack">
-          <article className="product-panel citation-panel">
+          <article className="product-panel citation-panel" data-product-focus="sources" ref={sourcesRef}>
             <PanelHeading title="Citation verification" meta="3 sources assessed" />
             {citationSources.map((source) => (
               <div className="citation-row" key={source.source}>
