@@ -1,8 +1,10 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database import get_db
+from database import get_optional_db
 from models.chat import ChatRequest, ChatResponse, HistoryResponse
 from services.auth_service import AUTH_COOKIE_NAME, get_user_from_token
 from services.chat import get_history
@@ -11,13 +13,14 @@ from services.product_service import record_debate_session
 
 router = APIRouter()
 bearer_scheme = HTTPBearer(auto_error=False)
+logger = logging.getLogger(__name__)
 
 
 @router.post("/chat", response_model=ChatResponse)
 async def chat(
     payload: ChatRequest,
     request: Request,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession | None = Depends(get_optional_db),
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
 ):
     token = credentials.credentials if credentials is not None else request.cookies.get(AUTH_COOKIE_NAME)
@@ -35,13 +38,16 @@ async def chat(
         session_id=storage_session_id,
         difficulty=payload.difficulty,
     )
-    await record_debate_session(
-        db=db,
-        user_id=user_id,
-        session_id=storage_session_id,
-        message=payload.message,
-        reply=response_text,
-    )
+    try:
+        await record_debate_session(
+            db=db,
+            user_id=user_id,
+            session_id=storage_session_id,
+            message=payload.message,
+            reply=response_text,
+        )
+    except Exception:
+        logger.exception("Failed to record debate session; returning chat answer anyway.")
     return {"reply": response_text, "session_id": payload.session_id}
 
 
@@ -49,7 +55,7 @@ async def chat(
 async def history(
     session_id: str,
     request: Request,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession | None = Depends(get_optional_db),
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
 ):
     token = credentials.credentials if credentials is not None else request.cookies.get(AUTH_COOKIE_NAME)

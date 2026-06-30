@@ -12,9 +12,13 @@ class OylanUnavailableError(RuntimeError):
     """Raised when the remote Oylan assistant cannot provide a response."""
 
 
+def is_oylan_configured() -> bool:
+    return bool(API_KEY and ASSISTANT_ID)
+
+
 async def send_message(content: str) -> str:
     """Send a message to the Oylan assistant and return its text reply."""
-    if not API_KEY or not ASSISTANT_ID:
+    if not is_oylan_configured():
         raise OylanUnavailableError("Oylan credentials are not configured.")
 
     url = f'{BASE_URL}/assistant/{ASSISTANT_ID}/interactions/'

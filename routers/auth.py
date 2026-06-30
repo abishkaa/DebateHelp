@@ -1,12 +1,11 @@
-from collections.abc import AsyncGenerator
 from urllib.parse import quote
 
-import database
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from fastapi.responses import RedirectResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from database import get_optional_db
 from models.user import (
     AuthResponse,
     ForgotPasswordRequest,
@@ -49,15 +48,6 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 bearer_scheme = HTTPBearer(auto_error=False)
 OAUTH_STATE_COOKIE_PREFIX = "debatehelp_oauth_state"
 OAUTH_STATE_MAX_AGE_SECONDS = 10 * 60
-
-
-async def get_optional_db() -> AsyncGenerator[AsyncSession | None, None]:
-    if not database.init_database() or database.AsyncSessionLocal is None:
-        yield None
-        return
-
-    async with database.AsyncSessionLocal() as session:
-        yield session
 
 
 async def get_current_user(

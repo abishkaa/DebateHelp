@@ -95,3 +95,12 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
     async with AsyncSessionLocal() as session:
         yield session
+
+
+async def get_optional_db() -> AsyncGenerator[AsyncSession | None, None]:
+    if not init_database() or AsyncSessionLocal is None:
+        yield None
+        return
+
+    async with AsyncSessionLocal() as session:
+        yield session

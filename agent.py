@@ -140,7 +140,7 @@ def _clean_final_answer(text: str) -> str:
     return cleaned
 
 
-def _fallback_debate_response(user_argument: str, difficulty: str) -> str:
+def fallback_debate_response(user_argument: str, difficulty: str) -> str:
     argument = user_argument.strip()
     normalized = argument.lower()
     has_causal_link = bool(re.search(r"\bbecause\b|\btherefore\b|leads? to|results? in", normalized))
@@ -171,6 +171,15 @@ def _fallback_debate_response(user_argument: str, difficulty: str) -> str:
     elif re.search(r"artificial intelligence|ai regulation|high-risk", normalized):
         counterargument = "An opponent can argue that broad compliance costs entrench large firms and slow beneficial low-risk innovation."
         stronger = "Use a risk-tiered rule, define high-risk use cases, and connect each obligation to a concrete public harm."
+    elif re.search(r"education|school|student|university|college|test", normalized):
+        counterargument = "An opponent can agree with the goal of better learning while arguing that incentives, teacher capacity, and unequal implementation determine whether the reform works."
+        stronger = "Define the student group, the learning outcome, the implementation mechanism, and the comparison against the current system."
+    elif re.search(r"speech|censor|platform|social media|misinformation", normalized):
+        counterargument = "An opponent can argue that broad speech controls create enforcement bias, chill legitimate disagreement, or move harmful content into harder-to-monitor spaces."
+        stronger = "Separate illegal harm, platform policy, and public debate, then specify who enforces the rule and what appeal process protects legitimate speech."
+    elif re.search(r"econom|tax|inflation|jobs?|wage|market", normalized):
+        counterargument = "An opponent can challenge the economic mechanism by asking who bears the cost, how incentives change, and whether the benefit reaches the intended group."
+        stronger = "Name the affected market, explain the incentive pathway, and compare short-term costs against long-term benefits."
     else:
         counterargument = "A strong opponent will challenge whether the evidence supports this conclusion rather than a narrower alternative."
         stronger = "Narrow the claim, define the mechanism, add one credible source, and answer the most plausible alternative cause."
@@ -213,7 +222,7 @@ async def run_debate_agent(
         try:
             model_reply = await send_message(prompt)
         except OylanUnavailableError:
-            return _fallback_debate_response(user_argument, difficulty)
+            return fallback_debate_response(user_argument, difficulty)
         tool_call = _parse_tool_call(model_reply)
 
         if tool_call is None:
@@ -223,7 +232,7 @@ async def run_debate_agent(
         try:
             observation = await _run_tool(tool_name, query)
         except OylanUnavailableError:
-            return _fallback_debate_response(user_argument, difficulty)
+            return fallback_debate_response(user_argument, difficulty)
         scratchpad.append(
             {
                 "tool": tool_name,
@@ -242,4 +251,4 @@ async def run_debate_agent(
     try:
         return _clean_final_answer(await send_message(final_prompt))
     except OylanUnavailableError:
-        return _fallback_debate_response(user_argument, difficulty)
+        return fallback_debate_response(user_argument, difficulty)

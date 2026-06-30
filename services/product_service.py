@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 import re
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,6 +14,13 @@ BASE_PROGRESS_SERIES = [
     68, 61, 56, 82, 86, 71, 59, 65, 74, 74, 81, 76, 70,
     70, 80, 72, 60, 55, 63, 63, 74, 74, 83, 69, 75, 81,
 ]
+_memory_sessions_by_user: dict[str, dict[str, dict[str, Any]]] = {}
+
+
+def _value(session: DebateSession | dict[str, Any], key: str):
+    if isinstance(session, dict):
+        return session[key]
+    return getattr(session, key)
 
 
 def infer_topic(message: str) -> str:
@@ -49,12 +57,39 @@ def build_title(topic: str, message: str) -> str:
 
 
 async def record_debate_session(
-    db: AsyncSession,
+    db: AsyncSession | None,
     user_id: str,
     session_id: str,
     message: str,
     reply: str,
-) -> DebateSession:
+) -> DebateSession | dict[str, Any]:
+    if db is None:
+        user_sessions = _memory_sessions_by_user.setdefault(user_id, {})
+        session = user_sessions.get(session_id)
+        topic = infer_topic(message)
+        score = estimate_score(message, reply)
+        now = datetime.now(timezone.utc)
+
+        if session is None:
+            session = {
+                "id": session_id,
+                "user_id": user_id,
+                "title": build_title(topic, message),
+                "topic": topic,
+                "score": score,
+                "argument_count": 1,
+                "created_at": now,
+                "updated_at": now,
+            }
+            user_sessions[session_id] = session
+        else:
+            session["topic"] = topic if session["topic"] == "Argument Analysis" else session["topic"]
+            session["title"] = build_title(str(session["topic"]), message)
+            session["score"] = round((int(session["score"]) * int(session["argument_count"]) + score) / (int(session["argument_count"]) + 1))
+            session["argument_count"] = int(session["argument_count"]) + 1
+            session["updated_at"] = now
+        return session
+
     result = await db.execute(
         select(DebateSession).where(
             DebateSession.id == session_id,
@@ -87,7 +122,15 @@ async def record_debate_session(
     return session
 
 
-async def get_user_sessions(db: AsyncSession, user_id: str, limit: int = 30) -> list[DebateSession]:
+async def get_user_sessions(db: AsyncSession | None, user_id: str, limit: int = 30) -> list[DebateSession | dict[str, Any]]:
+    if db is None:
+        sessions = list(_memory_sessions_by_user.get(user_id, {}).values())
+        return sorted(
+            sessions,
+            key=lambda session: _value(session, "updated_at"),
+            reverse=True,
+        )[:limit]
+
     result = await db.execute(
         select(DebateSession)
         .where(DebateSession.user_id == user_id)
@@ -97,36 +140,38 @@ async def get_user_sessions(db: AsyncSession, user_id: str, limit: int = 30) -> 
     return list(result.scalars().all())
 
 
-def serialize_session(session: DebateSession, previous_score: int | None = None) -> dict[str, object]:
-    trend_value = session.score - previous_score if previous_score is not None else 1
-    updated_at = session.updated_at
-    storage_prefix = f"{session.user_id}:"
-    public_id = session.id.removeprefix(storage_prefix)
+def serialize_session(session: DebateSession | dict[str, Any], previous_score: int | None = None) -> dict[str, object]:
+    score = int(_value(session, "score"))
+    user_id = str(_value(session, "user_id"))
+    trend_value = score - previous_score if previous_score is not None else 1
+    updated_at = _value(session, "updated_at")
+    storage_prefix = f"{user_id}:"
+    public_id = str(_value(session, "id")).removeprefix(storage_prefix)
     return {
         "id": public_id,
-        "title": session.title,
-        "topic": session.topic,
-        "score": session.score,
+        "title": str(_value(session, "title")),
+        "topic": str(_value(session, "topic")),
+        "score": score,
         "date": updated_at.strftime("%b %d, %Y - %I:%M %p"),
         "trend": f"{trend_value:+d}",
-        "argument_count": session.argument_count,
+        "argument_count": int(_value(session, "argument_count")),
     }
 
 
-def build_dashboard(sessions: list[DebateSession]) -> dict[str, object]:
+def build_dashboard(sessions: list[DebateSession | dict[str, Any]]) -> dict[str, object]:
     real_debates = len(sessions)
-    real_arguments = sum(session.argument_count for session in sessions)
+    real_arguments = sum(int(_value(session, "argument_count")) for session in sessions)
     debates = BASE_DEBATES + real_debates
     arguments = BASE_ARGUMENTS + real_arguments
-    score_total = BASE_PERSUASIVENESS * BASE_DEBATES + sum(session.score for session in sessions)
+    score_total = BASE_PERSUASIVENESS * BASE_DEBATES + sum(int(_value(session, "score")) for session in sessions)
     average = round(score_total / max(1, BASE_DEBATES + real_debates))
 
     chronological = list(reversed(sessions))
-    real_scores = [session.score for session in chronological]
+    real_scores = [int(_value(session, "score")) for session in chronological]
     progress_series = (BASE_PROGRESS_SERIES + real_scores)[-26:]
     recent = []
     for index, session in enumerate(sessions[:10]):
-        previous = sessions[index + 1].score if index + 1 < len(sessions) else None
+        previous = int(_value(sessions[index + 1], "score")) if index + 1 < len(sessions) else None
         recent.append(serialize_session(session, previous))
 
     return {

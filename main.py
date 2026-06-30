@@ -20,6 +20,7 @@ from security import (
 )
 from services.auth_service import validate_auth_configuration
 from services.auth_service import cleanup_auth_security_records
+from services.oylan import is_oylan_configured
 
 
 @asynccontextmanager
@@ -99,3 +100,23 @@ async def database_health():
     async with database.AsyncSessionLocal() as session:
         await session.execute(text("select 1"))
     return {"status": "ok", "database": "connected"}
+
+
+@app.get("/health/backend")
+async def backend_health():
+    database_status = "not_configured"
+    if database.init_database() and database.AsyncSessionLocal is not None:
+        try:
+            async with database.AsyncSessionLocal() as session:
+                await session.execute(text("select 1"))
+            database_status = "connected"
+        except Exception:
+            database_status = "unavailable"
+
+    return {
+        "status": "ok",
+        "answering": "available",
+        "database": database_status,
+        "ai_provider": "oylan" if is_oylan_configured() else "deterministic_fallback",
+        "fallback_enabled": True,
+    }
