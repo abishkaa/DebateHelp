@@ -61,7 +61,6 @@ SENSITIVE_AUTH_PATHS = {
     "/auth/verify-email",
     "/auth/oauth/google",
     "/auth/oauth/github",
-    "/auth/oauth/microsoft",
 }
 
 

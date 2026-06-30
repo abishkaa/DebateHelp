@@ -1,7 +1,6 @@
 const PROVIDERS = [
   { id: 'google', label: 'Continue with Google', mark: 'G' },
   { id: 'github', label: 'Continue with GitHub', mark: 'GH' },
-  { id: 'microsoft', label: 'Continue with Microsoft', mark: 'MS' },
 ]
 
 function OAuthButtons({ loadingProvider, onEmail, onProvider, showEmail = Boolean(onEmail) }) {

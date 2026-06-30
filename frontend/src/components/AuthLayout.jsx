@@ -31,7 +31,7 @@ function AuthLayout({ children, footer, subtitle, title, variant = 'login' }) {
           <div className="brand-mark">DH</div>
           <div>
             <p>DebateHelp</p>
-            <span>Cotton candy chaos terminal</span>
+            <span>Debate strategy terminal</span>
           </div>
         </div>
         <div className="auth-hero-copy">

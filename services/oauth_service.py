@@ -38,23 +38,6 @@ PROVIDERS = {
         token_url="https://github.com/login/oauth/access_token",
         scopes=("read:user", "user:email"),
     ),
-    "microsoft": OAuthProvider(
-        id="microsoft",
-        display_name="Microsoft",
-        client_id_env="MICROSOFT_CLIENT_ID",
-        client_secret_env="MICROSOFT_CLIENT_SECRET",
-        authorize_url=(
-            "https://login.microsoftonline.com/"
-            f"{os.getenv('MICROSOFT_TENANT_ID', 'common')}"
-            "/oauth2/v2.0/authorize"
-        ),
-        token_url=(
-            "https://login.microsoftonline.com/"
-            f"{os.getenv('MICROSOFT_TENANT_ID', 'common')}"
-            "/oauth2/v2.0/token"
-        ),
-        scopes=("openid", "email", "profile", "User.Read"),
-    ),
 }
 
 
@@ -123,8 +106,6 @@ def build_authorization_url(provider: str, state: str, redirect_uri: str) -> str
     if config.id == "google":
         query["access_type"] = "offline"
         query["prompt"] = "select_account"
-    if config.id == "microsoft":
-        query["response_mode"] = "query"
     return f"{config.authorize_url}?{urlencode(query)}"
 
 
@@ -147,8 +128,6 @@ async def exchange_code_for_profile(
         return await fetch_google_profile(access_token)
     if normalized == "github":
         return await fetch_github_profile(access_token)
-    if normalized == "microsoft":
-        return await fetch_microsoft_profile(access_token)
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Unsupported provider.")
 
 
@@ -221,21 +200,6 @@ async def fetch_github_profile(access_token: str) -> dict[str, Any]:
         "email": email,
         "full_name": user.get("name") or user.get("login") or email.split("@", 1)[0],
         "profile_image_url": user.get("avatar_url"),
-        "email_verified": True,
-    }
-
-
-async def fetch_microsoft_profile(access_token: str) -> dict[str, Any]:
-    data = await get_json("https://graph.microsoft.com/v1.0/me", access_token, "Microsoft")
-    email = normalize_profile_email(
-        data.get("mail") or data.get("userPrincipalName"),
-        "Microsoft",
-    )
-    return {
-        "provider": "microsoft",
-        "email": email,
-        "full_name": data.get("displayName") or email.split("@", 1)[0],
-        "profile_image_url": None,
         "email_verified": True,
     }
 
