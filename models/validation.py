@@ -7,6 +7,8 @@ from pydantic import BaseModel, ConfigDict
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 SESSION_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]*$")
 TOKEN_RE = re.compile(r"^[A-Za-z0-9._~-]+$")
+PROFILE_IMAGE_DATA_URL_RE = re.compile(r"^data:image/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$")
+MAX_PROFILE_IMAGE_DATA_URL_LENGTH = 80_000
 BIDI_CONTROL_CHARACTERS = {
     "\u061c",
     "\u200e",
@@ -96,3 +98,16 @@ def clean_http_url(value: str | None) -> str | None:
     if parsed.username or parsed.password:
         raise ValueError("URLs containing credentials are not allowed")
     return url
+
+
+def clean_profile_image_url(value: str | None) -> str | None:
+    if value is None:
+        return None
+    image_url = clean_text(value)
+    if image_url.startswith("data:"):
+        if len(image_url) > MAX_PROFILE_IMAGE_DATA_URL_LENGTH:
+            raise ValueError("Profile image is too large")
+        if not PROFILE_IMAGE_DATA_URL_RE.fullmatch(image_url):
+            raise ValueError("Profile image must be a JPG, PNG, or WebP image")
+        return image_url
+    return clean_http_url(image_url)

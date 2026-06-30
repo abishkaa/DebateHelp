@@ -12,6 +12,7 @@ from models.validation import (
     clean_http_url,
     clean_optional_text,
     clean_password,
+    clean_profile_image_url,
     clean_text,
     clean_token,
 )
@@ -187,7 +188,7 @@ class ProfileUpdateRequest(SecureRequestModel):
     preferred_debate_format: str | None = Field(default=None, max_length=80)
     main_interests: str | None = Field(default=None, max_length=240)
     organization: str | None = Field(default=None, max_length=160)
-    profile_image_url: str | None = Field(default=None, max_length=500)
+    profile_image_url: str | None = Field(default=None, max_length=80_000)
 
     @field_validator(
         "full_name",
@@ -204,7 +205,7 @@ class ProfileUpdateRequest(SecureRequestModel):
     @field_validator("profile_image_url")
     @classmethod
     def valid_profile_image_url(cls, value: str | None) -> str | None:
-        return clean_http_url(value)
+        return clean_profile_image_url(value)
 
 
 class AuthResponse(BaseModel):

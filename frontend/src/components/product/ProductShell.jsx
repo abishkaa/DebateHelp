@@ -151,7 +151,15 @@ function ProductShell({
         </button>
 
         <button className="product-account" type="button" onClick={() => navigateTo('/app/profile')}>
-          <span className="product-avatar">{getInitials(currentUser?.full_name)}</span>
+          {currentUser?.profile_image_url ? (
+            <img
+              className="product-avatar image"
+              alt={`${currentUser.full_name || 'User'} profile`}
+              src={currentUser.profile_image_url}
+            />
+          ) : (
+            <span className="product-avatar">{getInitials(currentUser?.full_name)}</span>
+          )}
           <span>
             <strong>{currentUser?.full_name || 'Abish Abdikalikov'}</strong>
             <small>{currentUser?.role || 'Debater'}</small>

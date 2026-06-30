@@ -10,12 +10,15 @@ import {
   TrendingUp,
 } from 'lucide-react'
 import { achievements, progressMetrics } from '../../data/productData.js'
+import { prepareProfileImage, PROFILE_IMAGE_HELP } from '../../utils/profileImage.js'
 import { PanelHeading, PageHeading } from './OverviewPage.jsx'
 
 function ProfilePage({ currentUser, updateProfile }) {
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [imageProcessing, setImageProcessing] = useState(false)
   const [message, setMessage] = useState('')
+  const [imageMessage, setImageMessage] = useState('')
   const [form, setForm] = useState({
     full_name: currentUser?.full_name || 'Abish Abdikalikov',
     role: currentUser?.role || 'Debater',
@@ -23,9 +26,35 @@ function ProfilePage({ currentUser, updateProfile }) {
     preferred_debate_format: currentUser?.preferred_debate_format || 'Parliamentary',
     main_interests: currentUser?.main_interests || 'AI policy, public speaking, evidence analysis',
     organization: currentUser?.organization || 'DebateHelp',
+    profile_image_url: currentUser?.profile_image_url || '',
   })
+  const initials = getInitials(form.full_name)
+
+  const handleProfileImageChange = async (event) => {
+    const input = event.currentTarget
+    const [file] = input.files || []
+    if (!file) return
+
+    setImageMessage('')
+    setImageProcessing(true)
+    try {
+      const profileImage = await prepareProfileImage(file)
+      setForm((current) => ({ ...current, profile_image_url: profileImage }))
+      setImageMessage('Image ready. Save profile to keep it.')
+    } catch (error) {
+      setImageMessage(error.message)
+      input.value = ''
+    } finally {
+      setImageProcessing(false)
+    }
+  }
 
   const saveProfile = async () => {
+    if (imageProcessing) {
+      setMessage('Wait a second — your profile image is still being prepared.')
+      return
+    }
+
     setSaving(true)
     setMessage('')
     try {
@@ -55,7 +84,11 @@ function ProfilePage({ currentUser, updateProfile }) {
       {message && <div className="profile-message">{message}</div>}
 
       <section className="profile-identity">
-        <span className="profile-large-avatar">AA</span>
+        {form.profile_image_url ? (
+          <img className="profile-large-avatar image" alt={`${form.full_name || 'User'} profile`} src={form.profile_image_url} />
+        ) : (
+          <span className="profile-large-avatar">{initials}</span>
+        )}
         <div>
           {editing ? (
             <input
@@ -66,6 +99,18 @@ function ProfilePage({ currentUser, updateProfile }) {
           ) : <h2>{form.full_name}</h2>}
           <p>{form.role} - {form.debate_level} - {form.organization}</p>
           <span><i /> Progress tracking active</span>
+          {editing && (
+            <label className="profile-image-control">
+              <strong>Profile image</strong>
+              <input
+                accept="image/jpeg,image/png,image/webp"
+                disabled={saving || imageProcessing}
+                type="file"
+                onChange={handleProfileImageChange}
+              />
+              <small>{imageProcessing ? 'Preparing image...' : (imageMessage || PROFILE_IMAGE_HELP)}</small>
+            </label>
+          )}
         </div>
       </section>
 
@@ -150,3 +195,13 @@ function ProfileField({ editing, label, onChange, value }) {
 }
 
 export default ProfilePage
+
+function getInitials(name = '') {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase() || 'AA'
+}

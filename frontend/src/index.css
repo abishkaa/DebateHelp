@@ -847,10 +847,51 @@ h2 {
   color: var(--muted);
 }
 
+.auth-upload input[type="file"] {
+  width: 100%;
+}
+
 .auth-upload em {
   color: var(--muted);
   font-size: 0.8rem;
   font-style: normal;
+}
+
+.auth-upload-preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid rgba(232, 181, 74, 0.25);
+  border-radius: 7px;
+  background: rgba(16, 18, 23, 0.65);
+}
+
+.auth-upload-preview img {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border: 1px solid rgba(232, 181, 74, 0.45);
+  border-radius: 12px;
+}
+
+.auth-upload-preview button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid rgba(232, 181, 74, 0.45);
+  border-radius: 999px;
+  background: rgba(232, 181, 74, 0.1);
+  color: var(--amber);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.auth-upload-error {
+  color: var(--red);
+  font-size: 0.78rem;
 }
 
 .auth-loading-dot {

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import AuthLayout from '../components/AuthLayout.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
+import { prepareProfileImage, PROFILE_IMAGE_HELP } from '../utils/profileImage.js'
 
 const ROLE_OPTIONS = ['Student', 'Debater', 'Teacher', 'Researcher', 'Coach', 'Other']
 const LEVEL_OPTIONS = ['Beginner', 'Intermediate', 'Advanced', 'Varsity', 'Coach']
@@ -17,10 +18,12 @@ function Register({ navigateTo }) {
     preferred_debate_format: user?.preferred_debate_format || 'Parliamentary',
     main_interests: user?.main_interests || '',
     organization: user?.organization || '',
-    profile_image_url: '',
+    profile_image_url: user?.profile_image_url || '',
     use_case: 'School',
   })
   const [error, setError] = useState('')
+  const [imageError, setImageError] = useState('')
+  const [imageProcessing, setImageProcessing] = useState(false)
   const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -29,10 +32,32 @@ function Register({ navigateTo }) {
     setForm((current) => ({ ...current, [name]: value }))
   }
 
+  const handleProfileImageChange = async (event) => {
+    const input = event.currentTarget
+    const [file] = input.files || []
+    if (!file) return
+
+    setImageError('')
+    setImageProcessing(true)
+    try {
+      const profileImage = await prepareProfileImage(file)
+      setForm((current) => ({ ...current, profile_image_url: profileImage }))
+    } catch (err) {
+      setImageError(err.message)
+      input.value = ''
+    } finally {
+      setImageProcessing(false)
+    }
+  }
+
   const handleSubmit = async (event) => {
     event.preventDefault()
     if (form.full_name.trim().length < 2) {
       setError('Enter your full name before continuing.')
+      return
+    }
+    if (imageProcessing) {
+      setError('Wait a second — your profile image is still being prepared.')
       return
     }
 
@@ -130,13 +155,34 @@ function Register({ navigateTo }) {
           />
         </label>
 
-        <label className="auth-upload">
+        <div className="auth-upload">
           <span>Profile image</span>
-          <input disabled type="file" />
-          <em>Upload placeholder. Connect storage later.</em>
-        </label>
+          {form.profile_image_url && (
+            <div className="auth-upload-preview">
+              <img alt="Profile preview" src={form.profile_image_url} />
+              <button
+                type="button"
+                onClick={() => {
+                  setForm((current) => ({ ...current, profile_image_url: '' }))
+                  setImageError('')
+                }}
+              >
+                Remove
+              </button>
+            </div>
+          )}
+          <input
+            accept="image/jpeg,image/png,image/webp"
+            aria-label="Profile image"
+            disabled={loading || imageProcessing}
+            type="file"
+            onChange={handleProfileImageChange}
+          />
+          <em>{imageProcessing ? 'Preparing image...' : PROFILE_IMAGE_HELP}</em>
+          {imageError && <small className="auth-upload-error">{imageError}</small>}
+        </div>
 
-        <button className="auth-submit" disabled={loading} type="submit">
+        <button className="auth-submit" disabled={loading || imageProcessing} type="submit">
           {loading ? 'Saving profile...' : 'Finish setup'}
         </button>
       </form>

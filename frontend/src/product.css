@@ -10357,6 +10357,72 @@ body,
   color: var(--stitch-text) !important;
 }
 
+.auth-upload-preview {
+  border-color: rgba(0, 245, 255, 0.22) !important;
+  background: linear-gradient(135deg, rgba(255, 24, 218, 0.1), rgba(0, 245, 255, 0.07)) !important;
+}
+
+.auth-upload-preview img,
+.product-avatar.image,
+.profile-large-avatar.image {
+  object-fit: cover !important;
+}
+
+.auth-upload-preview img {
+  border-color: rgba(0, 245, 255, 0.58) !important;
+  box-shadow: 0 0 18px rgba(0, 245, 255, 0.18) !important;
+}
+
+.auth-upload input[type="file"] {
+  color: var(--stitch-muted) !important;
+}
+
+.auth-upload input::file-selector-button,
+.auth-upload-preview button,
+.profile-image-control input::file-selector-button {
+  border: 1px solid rgba(0, 245, 255, 0.42) !important;
+  background: rgba(0, 245, 255, 0.1) !important;
+  color: var(--stitch-cyan) !important;
+}
+
+.auth-upload input::file-selector-button,
+.profile-image-control input::file-selector-button {
+  min-height: 34px;
+  margin-right: 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: "Space Mono", "JetBrains Mono", monospace;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.product-avatar.image,
+.profile-large-avatar.image {
+  display: block !important;
+  padding: 0 !important;
+}
+
+.profile-image-control {
+  display: grid;
+  gap: 8px;
+  max-width: 420px;
+  margin-top: 14px;
+  color: var(--stitch-muted);
+}
+
+.profile-image-control strong {
+  color: var(--stitch-cyan);
+  font-family: "Space Mono", "JetBrains Mono", monospace;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+}
+
+.profile-image-control small {
+  color: var(--stitch-muted);
+  line-height: 1.45;
+}
+
 .product-shell {
   display: grid !important;
   grid-template-columns: 286px minmax(0, 1fr) !important;
