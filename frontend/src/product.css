@@ -10311,15 +10311,74 @@ body,
   letter-spacing: -0.04em !important;
 }
 
+.auth-shell {
+  grid-template-columns: minmax(0, 1fr) minmax(360px, min(520px, 42vw)) !important;
+  gap: clamp(14px, 2vw, 24px) !important;
+  overflow-x: hidden !important;
+}
+
 .auth-hero,
 .auth-card {
+  min-width: 0 !important;
   border: 2px solid rgba(255, 139, 232, 0.48) !important;
   background: rgba(12, 10, 18, 0.86) !important;
   box-shadow: var(--stitch-glow) !important;
 }
 
 .auth-card {
+  width: min(100%, 520px) !important;
   border-color: rgba(0, 245, 255, 0.42) !important;
+}
+
+.auth-card-heading h2 {
+  max-width: 100% !important;
+  font-size: clamp(2.25rem, 3.8vw, 3.25rem) !important;
+  overflow-wrap: anywhere !important;
+}
+
+.auth-setup .auth-card-heading h2 {
+  font-size: clamp(2.15rem, 3.45vw, 3rem) !important;
+}
+
+.auth-form,
+.auth-field,
+.auth-two-column,
+.auth-two-column > *,
+.auth-upload,
+.onboarding-choice-group,
+.onboarding-choice-group > div,
+.onboarding-choice-group label {
+  min-width: 0 !important;
+}
+
+.auth-two-column {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  align-items: start !important;
+}
+
+@media (max-width: 960px) {
+  .auth-shell {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .auth-card {
+    width: min(100%, 620px) !important;
+  }
+}
+
+@media (max-width: 1360px) {
+  .auth-setup .auth-two-column,
+  .auth-setup .onboarding-choice-group > div {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .auth-two-column,
+  .onboarding-choice-group > div {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
 }
 
 .brand-mark,

@@ -54,8 +54,9 @@ def clean_text(value: str, *, allow_multiline: bool = False) -> str:
 def clean_optional_text(value: str | None) -> str | None:
     if value is None:
         return None
-    cleaned = clean_text(value)
-    return cleaned or None
+    if not value.strip():
+        return None
+    return clean_text(value)
 
 
 def clean_password(value: str) -> str:
@@ -91,6 +92,8 @@ def clean_session_id(value: str) -> str:
 def clean_http_url(value: str | None) -> str | None:
     if value is None:
         return None
+    if not value.strip():
+        return None
     url = clean_text(value)
     parsed = urlsplit(url)
     if parsed.scheme not in {"http", "https"} or not parsed.hostname:
@@ -102,6 +105,8 @@ def clean_http_url(value: str | None) -> str | None:
 
 def clean_profile_image_url(value: str | None) -> str | None:
     if value is None:
+        return None
+    if not value.strip():
         return None
     image_url = clean_text(value)
     if image_url.startswith("data:"):

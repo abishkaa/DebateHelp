@@ -15,9 +15,28 @@ function oauthStartUrl(provider) {
 
 function errorMessage(data, fallback) {
   if (typeof data.detail === 'string') return data.detail
-  if (Array.isArray(data.detail) && data.detail[0]?.message) return data.detail[0].message
-  if (Array.isArray(data.detail) && data.detail[0]?.msg) return data.detail[0].msg
+  if (Array.isArray(data.detail) && data.detail[0]) {
+    const error = data.detail[0]
+    const message = cleanValidationMessage(error.message || error.msg || fallback)
+    const field = fieldLabel(error.location || error.loc)
+    return field ? `${field}: ${message}` : message
+  }
   return data.message || fallback
+}
+
+function cleanValidationMessage(message) {
+  return String(message || '')
+    .replace(/^Value error,\s*/i, '')
+    .replace(/^Input should be a valid string\s*/i, 'Enter a valid value')
+    || 'Please check that field and try again.'
+}
+
+function fieldLabel(location = []) {
+  const field = Array.isArray(location) ? location[location.length - 1] : ''
+  if (!field || field === 'body') return ''
+  return String(field)
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (letter) => letter.toUpperCase())
 }
 
 async function request(path, { method = 'GET', body } = {}) {

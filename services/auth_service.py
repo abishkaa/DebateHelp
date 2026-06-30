@@ -52,6 +52,14 @@ _verification_tokens: dict[str, tuple[str, int]] = {}
 _reset_tokens: dict[str, tuple[str, int]] = {}
 _revoked_token_ids: dict[str, int] = {}
 _tokens_valid_after_by_user: dict[str, int] = {}
+CLEARABLE_PROFILE_FIELDS = {
+    "purpose",
+    "debate_level",
+    "preferred_debate_format",
+    "main_interests",
+    "organization",
+    "profile_image_url",
+}
 
 
 def validate_auth_configuration() -> None:
@@ -578,12 +586,18 @@ async def update_profile(
 ) -> User | dict[str, Any]:
     updates = request.model_dump(exclude_unset=True)
     if isinstance(user, dict):
-        user.update({key: value for key, value in updates.items() if value is not None})
+        user.update(
+            {
+                key: value
+                for key, value in updates.items()
+                if value is not None or key in CLEARABLE_PROFILE_FIELDS
+            }
+        )
         user["profile_completed"] = True
         return user
 
     for key, value in updates.items():
-        if value is not None:
+        if value is not None or key in CLEARABLE_PROFILE_FIELDS:
             setattr(user, key, value)
     assert db is not None
     user.profile_completed = True
