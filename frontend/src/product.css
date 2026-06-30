@@ -10006,3 +10006,683 @@ body,
     max-width: none;
   }
 }
+
+/* Stitch fidelity repair: keep the neon concept, fix the broken layout */
+:root {
+  --stitch-bg: #08080c;
+  --stitch-panel: rgba(16, 16, 24, 0.9);
+  --stitch-panel-soft: rgba(22, 18, 34, 0.78);
+  --stitch-border: rgba(255, 139, 232, 0.42);
+  --stitch-pink: #ff8be8;
+  --stitch-hot: #ff18da;
+  --stitch-cyan: #00f5ff;
+  --stitch-lime: #a8ff38;
+  --stitch-purple: #9b5cff;
+  --stitch-text: #fff8ff;
+  --stitch-muted: #b9aec7;
+  --stitch-glow: 0 18px 60px rgba(255, 24, 218, 0.18), 0 0 30px rgba(0, 245, 255, 0.12);
+  --font-stitch-display: "Bricolage Grotesque", "Hanken Grotesk", Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.stitch-landing.du-landing,
+.auth-shell,
+.product-shell {
+  font-family: "Hanken Grotesk", Inter, ui-sans-serif, system-ui, sans-serif !important;
+  color: var(--stitch-text) !important;
+  background:
+    radial-gradient(circle at 11% 12%, rgba(255, 24, 218, 0.24), transparent 32%),
+    radial-gradient(circle at 80% 8%, rgba(0, 245, 255, 0.18), transparent 28%),
+    radial-gradient(circle at 52% 84%, rgba(168, 255, 56, 0.1), transparent 30%),
+    linear-gradient(135deg, #18071e 0%, #090812 46%, #10162b 100%) !important;
+}
+
+.du-brand,
+.du-section-heading h2,
+.du-hero-copy h1,
+.du-resistance h2,
+.auth-hero-copy h1,
+.auth-card-heading h2,
+.product-page-heading h1,
+.profile-identity h2 {
+  font-family: var(--font-stitch-display) !important;
+  color: var(--stitch-text) !important;
+  letter-spacing: -0.07em !important;
+  text-shadow: 2px 2px 0 rgba(255, 24, 218, 0.72), -1px -1px 0 rgba(0, 245, 255, 0.48) !important;
+}
+
+.du-topbar {
+  min-height: 74px !important;
+  border-bottom: 2px solid rgba(0, 245, 255, 0.32) !important;
+  background: rgba(8, 8, 12, 0.82) !important;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.24) !important;
+}
+
+.du-brand {
+  font-size: 1.04rem !important;
+  letter-spacing: -0.03em !important;
+}
+
+.du-topbar nav a,
+.du-topbar nav button {
+  border: 1px solid transparent !important;
+  border-radius: 999px !important;
+  color: #e9ddf2 !important;
+  font-family: "Space Mono", "JetBrains Mono", monospace !important;
+  font-size: 0.82rem !important;
+  font-weight: 800 !important;
+  text-decoration: none !important;
+  text-transform: uppercase !important;
+}
+
+.du-topbar nav a:hover,
+.du-topbar nav button:hover {
+  border-color: rgba(255, 139, 232, 0.45) !important;
+  background: rgba(255, 139, 232, 0.12) !important;
+  color: var(--stitch-cyan) !important;
+}
+
+.du-shell {
+  display: grid !important;
+  grid-template-columns: minmax(210px, 250px) minmax(0, 1fr) !important;
+  gap: clamp(14px, 2vw, 22px) !important;
+  width: min(1500px, 100%) !important;
+  padding: clamp(14px, 2.3vw, 26px) !important;
+}
+
+.du-rail {
+  display: grid !important;
+  gap: 14px !important;
+  min-width: 0 !important;
+}
+
+.du-rail-panel,
+.du-side-nav a,
+.du-intel-card,
+.du-protocol-card,
+.du-dossier,
+.du-resistance,
+.du-hero-window {
+  border: 2px solid var(--stitch-border) !important;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.012)),
+    rgba(11, 11, 17, 0.86) !important;
+  box-shadow: var(--stitch-glow) !important;
+}
+
+.du-rail-panel {
+  max-height: calc(100vh - 134px) !important;
+  padding: 18px !important;
+  overflow: hidden !important;
+  border-color: rgba(168, 255, 56, 0.42) !important;
+}
+
+.du-rail-title,
+.du-terminal-feed span,
+.du-section-heading p,
+.du-kicker,
+.du-dossier-search,
+.du-footer span {
+  color: var(--stitch-cyan) !important;
+  font-family: "Space Mono", "JetBrains Mono", monospace !important;
+}
+
+.du-terminal-feed {
+  max-height: 420px !important;
+  overflow: hidden !important;
+}
+
+.du-side-nav a {
+  min-height: 44px !important;
+  border-color: rgba(0, 245, 255, 0.28) !important;
+  color: var(--stitch-text) !important;
+  font-family: "Space Mono", "JetBrains Mono", monospace !important;
+  text-transform: uppercase !important;
+}
+
+.du-main {
+  min-width: 0 !important;
+}
+
+.du-hero-window {
+  min-height: min(680px, calc(100vh - 124px)) !important;
+  overflow: hidden !important;
+  border-color: rgba(255, 139, 232, 0.5) !important;
+  border-radius: 34px !important;
+}
+
+.du-window-bar {
+  height: 52px !important;
+  border-bottom: 2px solid rgba(0, 245, 255, 0.24) !important;
+  background: rgba(8, 8, 12, 0.54) !important;
+  color: var(--stitch-cyan) !important;
+  font-family: "Space Mono", "JetBrains Mono", monospace !important;
+}
+
+.du-hero-art {
+  min-height: min(628px, calc(100vh - 176px)) !important;
+}
+
+.du-hero-art img {
+  right: clamp(-40px, 2vw, 54px) !important;
+  top: 50% !important;
+  width: min(44vw, 540px) !important;
+  max-width: 540px !important;
+  opacity: 0.78 !important;
+  border: 0 !important;
+  filter: saturate(1.08) contrast(1.02) !important;
+  transform: translateY(-50%) rotate(-4deg) !important;
+}
+
+.du-hero-art::before {
+  display: block !important;
+  width: min(36vw, 420px) !important;
+  height: min(36vw, 420px) !important;
+  background: rgba(168, 255, 56, 0.18) !important;
+  opacity: 0.9 !important;
+}
+
+.du-hero-art::after {
+  display: block !important;
+  right: clamp(20px, 5vw, 96px) !important;
+  bottom: 48px !important;
+  width: clamp(160px, 18vw, 240px) !important;
+  height: auto !important;
+  padding: 14px 16px !important;
+  border: 2px solid rgba(0, 245, 255, 0.56) !important;
+  border-radius: 18px !important;
+  background: rgba(8, 8, 12, 0.74) !important;
+  color: var(--stitch-cyan) !important;
+  box-shadow: 10px 10px 0 rgba(0, 0, 0, 0.38) !important;
+  font-size: 0.72rem !important;
+}
+
+.du-hero-copy {
+  top: 50% !important;
+  bottom: auto !important;
+  left: clamp(22px, 5vw, 78px) !important;
+  width: min(560px, calc(100% - 48px)) !important;
+  padding: clamp(24px, 4vw, 42px) !important;
+  border: 2px solid rgba(255, 139, 232, 0.58) !important;
+  border-radius: 28px !important;
+  background: rgba(12, 10, 18, 0.82) !important;
+  box-shadow: 16px 16px 0 rgba(0, 0, 0, 0.42), var(--stitch-glow) !important;
+  transform: translateY(-50%) !important;
+  backdrop-filter: blur(14px) !important;
+}
+
+.du-kicker {
+  color: var(--stitch-cyan) !important;
+  letter-spacing: 0.16em !important;
+  text-transform: uppercase !important;
+}
+
+.du-hero-copy h1 {
+  max-width: 10ch !important;
+  margin-bottom: 18px !important;
+  font-size: clamp(3.25rem, 7.2vw, 7rem) !important;
+  line-height: 0.86 !important;
+}
+
+.du-hero-copy > p:not(.du-kicker),
+.du-intel-card p,
+.du-protocol-card span,
+.du-dossier-row p,
+.du-resistance p {
+  color: #efe6f8 !important;
+  font-size: clamp(0.96rem, 1.4vw, 1.12rem) !important;
+  line-height: 1.6 !important;
+}
+
+.du-button,
+.auth-submit,
+.oauth-button,
+.product-button,
+.product-war-start,
+.panel-action {
+  border: 2px solid rgba(5, 5, 7, 0.92) !important;
+  border-radius: 16px !important;
+  box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.48) !important;
+  font-family: "Space Mono", "JetBrains Mono", monospace !important;
+  font-weight: 900 !important;
+  text-transform: uppercase !important;
+}
+
+.du-button.primary,
+.auth-submit,
+.product-button.primary,
+.product-war-start {
+  background: linear-gradient(135deg, var(--stitch-pink), var(--stitch-hot)) !important;
+  color: #08080c !important;
+}
+
+.du-button.secondary,
+.product-button.secondary,
+.auth-submit.bronze {
+  border-color: rgba(0, 245, 255, 0.42) !important;
+  background: rgba(8, 8, 12, 0.75) !important;
+  color: var(--stitch-text) !important;
+}
+
+.du-grid-section,
+.du-dossier,
+.du-resistance {
+  margin-top: 22px !important;
+}
+
+.du-intel-grid {
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)) !important;
+  gap: 16px !important;
+}
+
+.du-intel-card,
+.du-protocol-card {
+  min-height: 220px !important;
+  padding: 22px !important;
+  border-radius: 26px !important;
+}
+
+.du-intel-card:nth-child(2n),
+.du-protocol-card {
+  border-color: rgba(0, 245, 255, 0.46) !important;
+}
+
+.du-intel-card:nth-child(3n) {
+  border-color: rgba(168, 255, 56, 0.42) !important;
+}
+
+.du-intel-card span,
+.du-protocol-card p,
+.du-dossier-row span,
+.du-sticker {
+  color: var(--stitch-lime) !important;
+  font-family: "Space Mono", "JetBrains Mono", monospace !important;
+}
+
+.du-intel-card h3,
+.du-protocol-card strong {
+  color: var(--stitch-text) !important;
+  font-family: var(--font-stitch-display) !important;
+  letter-spacing: -0.04em !important;
+}
+
+.auth-hero,
+.auth-card {
+  border: 2px solid rgba(255, 139, 232, 0.48) !important;
+  background: rgba(12, 10, 18, 0.86) !important;
+  box-shadow: var(--stitch-glow) !important;
+}
+
+.auth-card {
+  border-color: rgba(0, 245, 255, 0.42) !important;
+}
+
+.brand-mark,
+.product-brand-mark,
+.oauth-button span,
+.session-icon,
+.achievement-symbol,
+.analysis-section > span,
+.citation-status {
+  border-color: rgba(0, 245, 255, 0.68) !important;
+  background: rgba(0, 245, 255, 0.12) !important;
+  color: var(--stitch-cyan) !important;
+}
+
+.auth-card-heading p,
+.eyebrow,
+.auth-brand span {
+  color: var(--stitch-cyan) !important;
+  font-family: "Space Mono", "JetBrains Mono", monospace !important;
+  text-transform: uppercase !important;
+}
+
+.auth-field input,
+.auth-field select,
+.auth-field textarea,
+.auth-upload,
+.history-toolbar label,
+.command-search input,
+.live-entry textarea,
+.argument-editor textarea,
+.profile-details input,
+.profile-identity input {
+  border: 2px solid rgba(255, 139, 232, 0.28) !important;
+  background: rgba(8, 8, 12, 0.7) !important;
+  color: var(--stitch-text) !important;
+}
+
+.product-shell {
+  display: grid !important;
+  grid-template-columns: 286px minmax(0, 1fr) !important;
+}
+
+.product-sidebar {
+  width: 286px !important;
+  border-right: 2px solid rgba(255, 139, 232, 0.4) !important;
+  background:
+    radial-gradient(circle at 0% 30%, rgba(255, 24, 218, 0.18), transparent 38%),
+    rgba(8, 8, 12, 0.94) !important;
+  scrollbar-color: rgba(0, 245, 255, 0.42) rgba(8, 8, 12, 0.86) !important;
+  scrollbar-width: thin !important;
+}
+
+.product-sidebar::-webkit-scrollbar {
+  width: 8px !important;
+  background: rgba(8, 8, 12, 0.86) !important;
+}
+
+.product-sidebar::-webkit-scrollbar-track {
+  border-radius: 999px !important;
+  background: rgba(8, 8, 12, 0.86) !important;
+}
+
+.product-sidebar::-webkit-scrollbar-thumb {
+  border: 2px solid rgba(8, 8, 12, 0.86) !important;
+  border-radius: 999px !important;
+  background: linear-gradient(180deg, var(--stitch-cyan), var(--stitch-pink)) !important;
+}
+
+.product-brand,
+.product-operator-card,
+.product-system-status,
+.product-account,
+.product-panel,
+.metric-block,
+.analysis-score,
+.live-control-bar,
+.team-metric-strip,
+.history-toolbar,
+.profile-identity,
+.profile-stat-grid article,
+.report-preview {
+  border: 2px solid rgba(255, 139, 232, 0.34) !important;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.052), rgba(255, 255, 255, 0.012)),
+    rgba(14, 14, 22, 0.88) !important;
+  box-shadow: var(--stitch-glow) !important;
+}
+
+.product-brand strong,
+.product-operator-card strong,
+.product-account strong {
+  font-family: var(--font-stitch-display) !important;
+  color: var(--stitch-text) !important;
+  letter-spacing: -0.04em !important;
+}
+
+.product-brand small,
+.product-operator-card span,
+.product-operator-card small,
+.product-system-status p,
+.product-system-status span,
+.product-system-status strong,
+.product-account small {
+  color: var(--stitch-muted) !important;
+  font-family: "Space Mono", "JetBrains Mono", monospace !important;
+}
+
+.product-nav button {
+  border: 2px solid transparent !important;
+  color: #d7cbe4 !important;
+  font-family: var(--font-stitch-display) !important;
+  font-size: 1rem !important;
+  font-weight: 900 !important;
+}
+
+.product-nav button span {
+  font-family: var(--font-stitch-display) !important;
+  font-size: 1rem !important;
+  font-weight: 900 !important;
+  letter-spacing: -0.03em !important;
+}
+
+.product-nav button:hover {
+  border-color: rgba(0, 245, 255, 0.44) !important;
+  background: rgba(0, 245, 255, 0.09) !important;
+  color: var(--stitch-cyan) !important;
+}
+
+.product-nav button.active {
+  border-color: rgba(0, 245, 255, 0.72) !important;
+  background: rgba(0, 245, 255, 0.13) !important;
+  color: var(--stitch-text) !important;
+  box-shadow: 5px 5px 0 rgba(0, 0, 0, 0.42) !important;
+}
+
+.product-topbar {
+  border-bottom: 2px solid rgba(0, 245, 255, 0.28) !important;
+  background: rgba(8, 8, 12, 0.76) !important;
+}
+
+.product-command-trigger {
+  border: 2px solid rgba(0, 245, 255, 0.34) !important;
+  background: rgba(14, 14, 22, 0.9) !important;
+  color: var(--stitch-muted) !important;
+}
+
+.product-command-trigger span {
+  font-family: "Space Mono", "JetBrains Mono", monospace !important;
+  color: #ded3ea !important;
+}
+
+.product-hud-tabs {
+  display: flex !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+
+.product-hud-tabs span,
+.product-live-state,
+.live-session-state {
+  border: 1px solid rgba(168, 255, 56, 0.36) !important;
+  background: rgba(168, 255, 56, 0.08) !important;
+  color: var(--stitch-lime) !important;
+  font-family: "Space Mono", "JetBrains Mono", monospace !important;
+}
+
+.product-page-heading {
+  border-bottom: 2px solid rgba(0, 245, 255, 0.28) !important;
+}
+
+.product-page-heading h1 {
+  font-family: var(--font-stitch-display) !important;
+  font-size: clamp(3rem, 6.6vw, 6.8rem) !important;
+  line-height: 0.86 !important;
+}
+
+.product-page-heading p {
+  color: #dacfe7 !important;
+  font-size: 1.04rem !important;
+}
+
+.metric-strip,
+.analysis-score-strip,
+.profile-stat-grid,
+.team-metric-strip {
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)) !important;
+  gap: 16px !important;
+}
+
+.metric-block,
+.analysis-score {
+  min-height: 154px !important;
+  border-radius: 24px !important;
+}
+
+.metric-block::before {
+  width: 6px !important;
+  background: linear-gradient(180deg, var(--stitch-pink), var(--stitch-cyan), var(--stitch-lime)) !important;
+}
+
+.metric-block span,
+.metric-block small,
+.analysis-score span,
+.analysis-score small {
+  color: var(--stitch-muted) !important;
+  font-family: "Space Mono", "JetBrains Mono", monospace !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase !important;
+}
+
+.metric-block strong,
+.analysis-score strong,
+.profile-stat-grid strong {
+  color: var(--stitch-text) !important;
+  font-family: var(--font-stitch-display) !important;
+  font-size: clamp(2.6rem, 5vw, 4rem) !important;
+  text-shadow: 2px 2px 0 rgba(255, 24, 218, 0.55) !important;
+}
+
+.product-panel-heading {
+  border-bottom: 1px solid rgba(255, 139, 232, 0.25) !important;
+}
+
+.product-panel-heading h2 {
+  color: var(--stitch-text) !important;
+  font-family: var(--font-stitch-display) !important;
+  font-size: 1.18rem !important;
+  letter-spacing: -0.04em !important;
+}
+
+.product-panel-heading span,
+.product-panel-heading button {
+  color: var(--stitch-cyan) !important;
+  font-family: "Space Mono", "JetBrains Mono", monospace !important;
+}
+
+.history-table > button,
+.session-list button,
+.achievement-list > div,
+.growth-list > div,
+.analysis-trace-list > div,
+.analysis-section,
+.citation-row,
+.speaker-score-row,
+.live-signal-list > div,
+.team-member-list > div,
+.review-notes > div,
+.profile-details > label,
+.profile-strength-grid > div,
+.profile-achievements article {
+  border: 1px solid rgba(0, 245, 255, 0.24) !important;
+  background: rgba(8, 8, 12, 0.58) !important;
+}
+
+.command-palette {
+  border: 2px solid rgba(0, 245, 255, 0.56) !important;
+  background: rgba(16, 16, 24, 0.96) !important;
+  box-shadow: 0 0 70px rgba(0, 245, 255, 0.18), 12px 12px 0 rgba(0, 0, 0, 0.42) !important;
+}
+
+.command-list button.selected,
+.command-list button:hover {
+  background: rgba(255, 139, 232, 0.14) !important;
+}
+
+.product-mobile-tabs {
+  border-top: 2px solid rgba(255, 139, 232, 0.36) !important;
+  background: rgba(8, 8, 12, 0.94) !important;
+}
+
+.product-mobile-tabs button.active {
+  background: linear-gradient(135deg, var(--stitch-pink), var(--stitch-purple)) !important;
+  color: #08080c !important;
+}
+
+@media (max-width: 1320px) {
+  .product-hud-tabs {
+    display: none !important;
+  }
+}
+
+@media (max-width: 1180px) {
+  .du-shell {
+    grid-template-columns: 1fr !important;
+  }
+
+  .du-rail {
+    display: none !important;
+  }
+
+  .product-shell {
+    display: block !important;
+    grid-template-columns: 1fr !important;
+  }
+
+  .product-sidebar {
+    position: fixed !important;
+    inset: 0 auto 0 0 !important;
+    z-index: 70 !important;
+    width: min(340px, 88vw) !important;
+    height: 100vh !important;
+    transform: translateX(-105%) !important;
+  }
+
+  .product-sidebar.open {
+    transform: translateX(0) !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .du-topbar {
+    gap: 10px !important;
+    padding-block: 12px !important;
+  }
+
+  .du-hero-window {
+    min-height: 620px !important;
+    border-radius: 24px !important;
+  }
+
+  .du-hero-art {
+    min-height: 568px !important;
+  }
+
+  .du-hero-art img {
+    right: -110px !important;
+    top: 44px !important;
+    width: 440px !important;
+    opacity: 0.34 !important;
+    transform: rotate(-7deg) !important;
+  }
+
+  .du-hero-art::before,
+  .du-hero-art::after {
+    display: none !important;
+  }
+
+  .du-hero-copy {
+    top: auto !important;
+    right: 14px !important;
+    bottom: 18px !important;
+    left: 14px !important;
+    width: auto !important;
+    padding: 22px !important;
+    transform: none !important;
+  }
+
+  .du-hero-copy h1 {
+    max-width: 8ch !important;
+    font-size: clamp(3rem, 16vw, 4.8rem) !important;
+  }
+
+  .product-topbar {
+    overflow: visible !important;
+  }
+
+  .product-page-heading h1 {
+    font-size: clamp(2.8rem, 14vw, 4.4rem) !important;
+  }
+
+  .metric-strip,
+  .analysis-score-strip,
+  .profile-stat-grid,
+  .team-metric-strip {
+    grid-template-columns: 1fr !important;
+  }
+
+  .metric-block,
+  .analysis-score {
+    min-height: 136px !important;
+  }
+}
