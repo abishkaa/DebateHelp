@@ -2,7 +2,7 @@ import ast
 import re
 from collections.abc import Awaitable, Callable
 
-from services.oylan import send_message
+from services.oylan import OylanUnavailableError, send_message
 from tools import check_facts, search_counterarguments, suggest_sources
 
 ToolFunction = Callable[[str], Awaitable[str]]
@@ -140,6 +140,53 @@ def _clean_final_answer(text: str) -> str:
     return cleaned
 
 
+def _fallback_debate_response(user_argument: str, difficulty: str) -> str:
+    argument = user_argument.strip()
+    normalized = argument.lower()
+    has_causal_link = bool(re.search(r"\bbecause\b|\btherefore\b|leads? to|results? in", normalized))
+    has_evidence = bool(re.search(r"\bstudy\b|\bresearch\b|\bdata\b|\breport\b|\bsource\b|\bstatistic", normalized))
+    acknowledges_opposition = bool(re.search(r"\bhowever\b|\balthough\b|\boppos|\bcounter|\btrade-?off", normalized))
+
+    strengths = []
+    if has_causal_link:
+        strengths.append("It states a causal path instead of presenting only a conclusion.")
+    else:
+        strengths.append("It presents a clear position that an audience can evaluate.")
+    if acknowledges_opposition:
+        strengths.append("It already signals awareness of competing considerations.")
+
+    weaknesses = []
+    if not has_evidence:
+        weaknesses.append("The main factual premise is not tied to a named source or measurable result.")
+    if not has_causal_link:
+        weaknesses.append("The claim needs an explicit explanation of how the proposed cause produces the outcome.")
+    weaknesses.append("The strongest opposing explanation or implementation cost is not answered directly.")
+
+    if re.search(r"health|medical|care", normalized):
+        counterargument = "An opponent can accept the access goal while arguing that funding, provider capacity, and transition design determine whether the policy improves outcomes."
+        stronger = "Frame the case around a specific access mechanism, one measurable health outcome, and a funding model that addresses capacity risk."
+    elif re.search(r"climate|carbon|emission", normalized):
+        counterargument = "An opponent can argue that price signals are too weak or politically constrained to change behavior without direct standards and investment."
+        stronger = "Present carbon pricing as one part of a policy package, then specify the price signal, household protection, and complementary regulation."
+    elif re.search(r"artificial intelligence|ai regulation|high-risk", normalized):
+        counterargument = "An opponent can argue that broad compliance costs entrench large firms and slow beneficial low-risk innovation."
+        stronger = "Use a risk-tiered rule, define high-risk use cases, and connect each obligation to a concrete public harm."
+    else:
+        counterargument = "A strong opponent will challenge whether the evidence supports this conclusion rather than a narrower alternative."
+        stronger = "Narrow the claim, define the mechanism, add one credible source, and answer the most plausible alternative cause."
+
+    scrutiny = "Apply adversarial scrutiny to each premise." if difficulty == "hard" else "Test the central premise before expanding the claim."
+    return "\n\n".join(
+        [
+            f"Strongest part: {' '.join(strengths)}",
+            f"Main weakness: {' '.join(weaknesses)}",
+            f"Counterargument: {counterargument}",
+            f"Stronger framing: {stronger} {scrutiny}",
+            "Confidence: Moderate. A credible primary source or a clearly defined comparison case could materially change this assessment.",
+        ]
+    )
+
+
 async def _run_tool(tool_name: str, query: str) -> str:
     tool = TOOLS.get(tool_name)
     if tool is None:
@@ -163,14 +210,20 @@ async def run_debate_agent(
             history=history,
             scratchpad=scratchpad,
         )
-        model_reply = await send_message(prompt)
+        try:
+            model_reply = await send_message(prompt)
+        except OylanUnavailableError:
+            return _fallback_debate_response(user_argument, difficulty)
         tool_call = _parse_tool_call(model_reply)
 
         if tool_call is None:
             return _clean_final_answer(model_reply)
 
         tool_name, query = tool_call
-        observation = await _run_tool(tool_name, query)
+        try:
+            observation = await _run_tool(tool_name, query)
+        except OylanUnavailableError:
+            return _fallback_debate_response(user_argument, difficulty)
         scratchpad.append(
             {
                 "tool": tool_name,
@@ -186,4 +239,7 @@ async def run_debate_agent(
         scratchpad=scratchpad,
         force_final=True,
     )
-    return _clean_final_answer(await send_message(final_prompt))
+    try:
+        return _clean_final_answer(await send_message(final_prompt))
+    except OylanUnavailableError:
+        return _fallback_debate_response(user_argument, difficulty)

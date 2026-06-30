@@ -1,0 +1,144 @@
+.card {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(22, 24, 29, 0.96);
+  box-shadow: 0 16px 42px var(--shadow);
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.header span,
+.header em,
+.paths span,
+.outcome dt {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+.header span {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--blue);
+}
+
+.header strong {
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.header em {
+  color: var(--green);
+  font-style: normal;
+}
+
+.paths {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.paths button {
+  min-width: 0;
+  min-height: 58px;
+  padding: 10px;
+  cursor: pointer;
+  border: 1px solid var(--border-soft);
+  border-radius: 7px;
+  background: var(--panel-2);
+  color: var(--text);
+  text-align: left;
+  transition: border-color 180ms ease, transform 180ms ease;
+}
+
+.paths button:hover,
+.paths .selected {
+  border-color: var(--blue);
+  transform: translateY(-1px);
+}
+
+.paths span {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--muted);
+}
+
+.paths strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.outcome {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 12px;
+}
+
+.timeline {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 0;
+}
+
+.timeline::before {
+  content: "";
+  position: absolute;
+  top: 14px;
+  bottom: 14px;
+  width: 1px;
+  background: linear-gradient(var(--blue), var(--green));
+}
+
+.timeline span {
+  z-index: 1;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--panel);
+  border: 2px solid var(--green);
+}
+
+.outcome dl {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.outcome dl div {
+  padding: 9px 10px;
+  border: 1px solid var(--border-soft);
+  border-radius: 7px;
+  background: var(--panel-2);
+}
+
+.outcome dt {
+  margin-bottom: 5px;
+  color: var(--muted);
+}
+
+.outcome dd {
+  margin: 0;
+  color: #d7d5cf;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+@media (max-width: 640px) {
+  .paths {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -1,0 +1,367 @@
+<!DOCTYPE html><html class="dark" lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>DebateHelp - Master the Art of Reasoning</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&amp;family=Hanken+Grotesk:ital,wght@0,100..900;1,100..900&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-tint": "#c8c6c5",
+                        "surface-container-highest": "#343532",
+                        "outline-variant": "#444748",
+                        "tertiary-fixed-dim": "#eebd8e",
+                        "surface-container-lowest": "#0e0e0c",
+                        "secondary": "#e9c349",
+                        "on-secondary": "#3c2f00",
+                        "tertiary": "#eebd8e",
+                        "surface": "#131411",
+                        "tertiary-container": "#2a1500",
+                        "error-container": "#93000a",
+                        "on-secondary-container": "#342800",
+                        "on-primary": "#313030",
+                        "inverse-on-surface": "#30312e",
+                        "on-surface-variant": "#c4c7c7",
+                        "surface-container-low": "#1b1c19",
+                        "on-tertiary-fixed": "#2c1600",
+                        "surface-container": "#1f201d",
+                        "on-primary-fixed": "#1c1b1b",
+                        "surface-variant": "#343532",
+                        "surface-dim": "#131411",
+                        "inverse-surface": "#e4e2dd",
+                        "primary": "#c8c6c5",
+                        "secondary-fixed-dim": "#e9c349",
+                        "primary-fixed-dim": "#c8c6c5",
+                        "on-tertiary-fixed-variant": "#61401b",
+                        "secondary-fixed": "#ffe088",
+                        "on-error": "#690005",
+                        "on-secondary-fixed": "#241a00",
+                        "on-background": "#e4e2dd",
+                        "outline": "#8e9192",
+                        "secondary-container": "#af8d11",
+                        "on-error-container": "#ffdad6",
+                        "on-primary-container": "#848282",
+                        "tertiary-fixed": "#ffdcbd",
+                        "on-tertiary": "#472a06",
+                        "primary-fixed": "#e5e2e1",
+                        "primary-container": "#1a1a1a",
+                        "on-secondary-fixed-variant": "#574500",
+                        "on-surface": "#e4e2dd",
+                        "error": "#ffb4ab",
+                        "on-primary-fixed-variant": "#474746",
+                        "surface-bright": "#393936",
+                        "on-tertiary-container": "#a47a51",
+                        "inverse-primary": "#5f5e5e",
+                        "background": "#131411",
+                        "surface-container-high": "#2a2a27"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "margin-mobile": "16px",
+                        "margin-desktop": "40px",
+                        "unit": "8px",
+                        "gutter": "24px",
+                        "container-max": "1280px"
+                    },
+                    "fontFamily": {
+                        "display-lg": ["Libre Caslon Text", "serif"],
+                        "body-md": ["Hanken Grotesk", "sans-serif"],
+                        "headline-sm": ["Libre Caslon Text", "serif"],
+                        "headline-md": ["Libre Caslon Text", "serif"],
+                        "body-lg": ["Hanken Grotesk", "sans-serif"],
+                        "display-lg-mobile": ["Libre Caslon Text", "serif"],
+                        "label-sm": ["Hanken Grotesk", "sans-serif"],
+                        "label-md": ["Hanken Grotesk", "sans-serif"]
+                    },
+                    "fontSize": {
+                        "display-lg": ["48px", { "lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-md": ["16px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "headline-sm": ["24px", { "lineHeight": "1.4", "fontWeight": "400" }],
+                        "headline-md": ["32px", { "lineHeight": "1.3", "fontWeight": "400" }],
+                        "body-lg": ["18px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "display-lg-mobile": ["32px", { "lineHeight": "1.2", "fontWeight": "700" }],
+                        "label-sm": ["12px", { "lineHeight": "1", "fontWeight": "500" }],
+                        "label-md": ["14px", { "lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            background-color: #131411; /* matching background */
+            color: #e4e2dd; /* matching on-background */
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+        }
+
+        /* Material Symbols Outline Class setup */
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.fill {
+            font-variation-settings: 'FILL' 1, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #131411;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #343532;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #444748;
+        }
+
+        /* Reveal Animations */
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.8s cubic-bezier(0.5, 0, 0, 1);
+        }
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Parallax Hero */
+        .parallax-bg {
+            background-attachment: fixed;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-size: cover;
+        }
+
+        /* Card Hover Effects */
+        .scholar-card {
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .scholar-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            border: 1px solid rgba(249, 247, 242, 0.1); /* Subtle border matching prompt */
+            border-radius: inherit;
+            pointer-events: none;
+            transition: border-color 0.4s ease;
+        }
+        .scholar-card:hover::before {
+            border-color: rgba(233, 195, 73, 0.5); /* Secondary gold highlight */
+        }
+        .scholar-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        /* Argument Thread */
+        .argument-thread {
+            border-left: 2px solid #e9c349;
+            padding-left: 1rem;
+        }
+
+        /* Image Scale Hover */
+        .img-scale-container {
+            overflow: hidden;
+        }
+        .img-scale-container img {
+            transition: transform 0.6s ease;
+        }
+        .img-scale-container:hover img {
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md antialiased selection:bg-secondary selection:text-on-secondary">
+<!-- Top Navigation Placeholder (Hidden for landing page focus, but present for structure if needed later) -->
+<nav class="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-md border-b border-outline-variant/30 px-margin-mobile md:px-margin-desktop py-4 flex justify-between items-center hidden">
+<div class="font-headline-md text-headline-md text-on-surface">DebateHelp</div>
+<div class="flex gap-4">
+<button class="text-on-surface-variant hover:text-secondary transition-colors"><span class="material-symbols-outlined">search</span></button>
+<button class="text-on-surface-variant hover:text-secondary transition-colors"><span class="material-symbols-outlined">menu</span></button>
+</div>
+</nav>
+<!-- SECTION 1: Hero -->
+<header class="relative h-screen w-full flex items-center justify-center parallax-bg" style="background-image: url(&quot;https://lh3.googleusercontent.com/aida-public/AB6AXuBTt0o9sTXFH22tKjkg67UcG7KGMHqAuQkDTJg_RVmv2zrXxBWTDCZxZLtJYqDHGnf8W5xL5pyMs0lcOtnoCOtPrGcWIFL1-UUTqZkAXCUphom-tRc701TXxVNp2gAN0mblfW6P-1kBKY-XvTpfJ20O6HkZK3gEeidILbIcg1x-gBSBqwXSUO9uOGYg-N-RSSHqxBuEO9CwHsieqAKMBx_4X1UzZi_pIjmr8ZbRXKZQa19Hz3mZfO0ehFP0BzRsXinXf1FR8n_5gnc&quot;);">
+<!-- Overlay -->
+<div class="absolute inset-0 bg-gradient-to-b from-background/40 via-background/60 to-background z-10"></div>
+<div class="relative z-20 text-center px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto flex flex-col items-center">
+<div class="mb-6 inline-block reveal active">
+<span class="font-label-md text-label-md text-secondary tracking-widest uppercase">The Digital Library</span>
+</div>
+<h1 class="font-display-lg-mobile md:font-display-lg text-display-lg-mobile md:text-display-lg text-on-surface mb-6 max-w-4xl reveal active" style="transition-delay: 0.1s;">
+                Master the Art of Reasoning
+            </h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mb-10 reveal active" style="transition-delay: 0.2s;">
+                Explore the greatest arguments in human history. Engage with timeless ideas through a premium, distraction-free environment designed for critical synthesis.
+            </p>
+<div class="flex gap-4 reveal active" style="transition-delay: 0.3s;">
+<button class="bg-secondary text-on-secondary font-label-md text-label-md px-8 py-3 rounded hover:bg-secondary-fixed transition-colors">
+                    Start Synthesizing
+                </button>
+<button class="border border-outline text-on-surface font-label-md text-label-md px-8 py-3 rounded hover:border-secondary hover:text-secondary transition-colors">
+                    Explore Library
+                </button>
+</div>
+</div>
+<div class="absolute bottom-10 left-1/2 transform -translate-x-1/2 z-20 animate-bounce">
+<span class="material-symbols-outlined text-on-surface-variant">arrow_downward</span>
+</div>
+</header>
+<!-- SECTION 2: Great Debates in History -->
+<section class="py-24 px-margin-mobile md:px-margin-desktop bg-surface-container-lowest">
+<div class="max-w-container-max mx-auto">
+<div class="mb-16 reveal active">
+<h2 class="font-headline-md text-headline-md text-on-surface mb-4">Great Debates in History</h2>
+<div class="h-[1px] w-24 bg-secondary"></div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-gutter">
+<!-- Card 1 -->
+<div class="scholar-card bg-surface rounded-lg p-8 reveal flex flex-col justify-between h-[500px] img-scale-container group cursor-pointer active"><div class="absolute inset-0 z-0"><img class="w-full h-full object-cover opacity-40 group-hover:opacity-60 transition-opacity duration-500" alt="Nelson Mandela Portrait" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD7btM_TbmXZ94HjWn1wAANrribtGmxxrGmDxuxFEkkVtNqYPoPzWV2U-oL-1MZeYqVuWfEZyMWlENzH_pPs8l3wLfmqrV-BM1ASpeyaklw185XaGGXotS-bUyTYkNEMp2WfRnBbiNaYB-FNk7dzD1RsMhJVz98dOaL037ENI3scsWuNqItnqm2-DIkih8zr6un73smGsNsVWUaTp_Vkk9JeItnxZ46ObDTuYMiyuOLD6wRCO3AKXnMOTW6PYH8hoK_saKixb30FR0"><div class="absolute inset-0 bg-gradient-to-t from-surface via-surface/80 to-transparent"></div></div><div class="relative z-10 flex justify-between items-start"><span class="font-label-md text-label-md text-secondary">1990</span><span class="material-symbols-outlined text-on-surface-variant">diversity_3</span></div><div class="relative z-10 mt-auto"><h3 class="font-headline-sm text-headline-sm text-on-surface mb-2">Mandela and Reconciliation</h3><p class="font-body-md text-body-md text-on-surface-variant mb-4 line-clamp-2">The historic transition from apartheid to a multiracial democracy, centered on forgiveness and national unity.</p><div class="flex items-center text-secondary font-label-sm text-label-sm uppercase tracking-wider group-hover:underline">Examine Arguments <span class="material-symbols-outlined ml-2 text-[16px]">arrow_forward</span></div></div></div>
+<!-- Card 2 -->
+<div class="scholar-card bg-surface rounded-lg p-8 reveal flex flex-col justify-between h-[500px] img-scale-container group cursor-pointer active" style="transition-delay: 0.1s;"><div class="absolute inset-0 z-0"><img class="w-full h-full object-cover opacity-40 group-hover:opacity-60 transition-opacity duration-500" alt="Florence Nightingale Portrait" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAjKmDoqCIdpv0wAGiUf5JsWpnKU2jM-uPDAf1dy96lh2KVQi7E0lDVrEZHpYQ9yWmMqpTgjg1xjfFB1_fEZmIo_vINGU91RoCMW4PSh_j49gWLUOOsy1pAk48vKh_v4NOTZapTwIZ-hGNHCnrGxbEt3VeAZUzNjqqS2g5Dnvai_ESQRJQB8Yz-zYC_78cG0vvULHCOXb9G18nb8bX0Avtf5goMGSxASK5TDosIlzK7OuWs6j8vshfNJXmXHYad80LSiw-C2cvA9gs"><div class="absolute inset-0 bg-gradient-to-t from-surface via-surface/80 to-transparent"></div></div><div class="relative z-10 flex justify-between items-start"><span class="font-label-md text-label-md text-secondary">1854</span><span class="material-symbols-outlined text-on-surface-variant">medical_services</span></div><div class="relative z-10 mt-auto"><h3 class="font-headline-sm text-headline-sm text-on-surface mb-2">Nightingale and Reform</h3><p class="font-body-md text-body-md text-on-surface-variant mb-4 line-clamp-2">The revolutionary debate on sanitary conditions and professional nursing that transformed modern healthcare.</p><div class="flex items-center text-secondary font-label-sm text-label-sm uppercase tracking-wider group-hover:underline">Examine Arguments <span class="material-symbols-outlined ml-2 text-[16px]">arrow_forward</span></div></div></div>
+</div>
+</div>
+</section>
+<!-- SECTION 3: Explore Ideas (Bento Grid) -->
+<section class="py-24 px-margin-mobile md:px-margin-desktop bg-background">
+<div class="max-w-container-max mx-auto">
+<div class="flex justify-between items-end mb-16 reveal active">
+<div>
+<h2 class="font-headline-md text-headline-md text-on-surface mb-4">Explore Disciplines</h2>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-lg">Navigate the landscape of human thought through structured categorization.</p>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 md:grid-rows-2 gap-unit h-auto md:h-[600px]">
+<!-- Philosophy (Large) -->
+<div class="scholar-card bg-surface-container rounded-lg p-8 md:col-span-2 md:row-span-2 reveal group cursor-pointer relative overflow-hidden flex flex-col justify-end active">
+<div class="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-secondary via-background to-background group-hover:opacity-20 transition-opacity duration-500"></div>
+<div class="relative z-10">
+<span class="material-symbols-outlined text-[48px] text-secondary mb-4 block">psychology</span>
+<h3 class="font-headline-sm text-headline-sm text-on-surface mb-2">Philosophy</h3>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-md">The foundational inquiry into existence, knowledge, values, reason, mind, and language.</p>
+</div>
+</div>
+<!-- Ethics -->
+<div class="scholar-card bg-surface-container rounded-lg p-6 reveal group cursor-pointer relative overflow-hidden flex flex-col justify-center active" style="transition-delay: 0.1s;">
+<div class="relative z-10 flex items-center gap-4">
+<div class="bg-surface p-3 rounded-full border border-outline-variant"><span class="material-symbols-outlined text-secondary">gavel</span></div>
+<div>
+<h3 class="font-label-md text-label-md text-on-surface uppercase tracking-wider">Ethics</h3>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Moral Philosophy</span>
+</div>
+</div>
+</div>
+<!-- Politics -->
+<div class="scholar-card bg-surface-container rounded-lg p-6 reveal group cursor-pointer relative overflow-hidden flex flex-col justify-center active" style="transition-delay: 0.2s;">
+<div class="relative z-10 flex items-center gap-4">
+<div class="bg-surface p-3 rounded-full border border-outline-variant"><span class="material-symbols-outlined text-secondary">public</span></div>
+<div>
+<h3 class="font-label-md text-label-md text-on-surface uppercase tracking-wider">Politics</h3>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Governance &amp; Power</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- SECTION 4: Learn Like Great Thinkers -->
+<section class="py-24 px-margin-mobile md:px-margin-desktop bg-surface border-y border-outline-variant/30">
+<div class="max-w-container-max mx-auto">
+<div class="text-center mb-16 reveal active">
+<span class="material-symbols-outlined text-secondary text-[32px] mb-4 block">school</span>
+<h2 class="font-headline-md text-headline-md text-on-surface">Learn Like Great Thinkers</h2>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
+<div class="reveal img-scale-container rounded-lg overflow-hidden border border-outline-variant/50 shadow-2xl active">
+<img class="w-full h-auto object-cover" data-alt="Classical painting style portrait of Aristotle in a library or academy setting. Soft, warm cinematic lighting, rich oil painting textures but with a modern editorial sharpness. Deep charcoal and gold palette. Premium historical documentary aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA-DOf_PnWvCaWoaLmQUDSZunZ9s7Y1lTGzlYso8kTt93xXN7I_hhYF6KCqGdv_31l-w_EgvUUXXHRB5LRZjvDOsU_dZNG1eEkfB-ap0ktCmGvT0ySeyrWmDyaZrxBfZQjXPBGCz7cDjj8U8ItV_uvsoGclM5ImZSMhPNeVZ47kwUxGDwiQsg_5tElq-hUfFAr6w_p8lrYp0ff7I98f7TKTSncbNnG48VwwpB3hUioqhqBG972V-h7lbpE0iQWSHBRoJ7NjCdBSWow">
+</div>
+<div class="reveal active" style="transition-delay: 0.2s;"><div class="mb-8"><span class="font-label-md text-label-md text-secondary tracking-widest uppercase mb-2 block">The Stoic Discipline</span><h3 class="font-headline-sm text-headline-sm text-on-surface mb-6">"You have power over your mind — not outside events. Realize this, and you will find strength."</h3></div><div class="space-y-6"><div class="argument-thread"><h4 class="font-label-md text-label-md text-on-surface mb-1">Objective Judgment</h4><p class="font-body-md text-body-md text-on-surface-variant">See things as they are, without the coloring of emotional bias or social pressure.</p></div><div class="argument-thread border-surface-variant"><h4 class="font-label-md text-label-md text-on-surface mb-1">Unselfish Action</h4><p class="font-body-md text-body-md text-on-surface-variant">Direct your efforts toward the common good, regardless of personal recognition.</p></div><div class="argument-thread border-surface-variant"><h4 class="font-label-md text-label-md text-on-surface mb-1">Willing Acceptance</h4><p class="font-body-md text-body-md text-on-surface-variant">Embrace the present moment and the natural order of the universe with equanimity.</p></div></div></div>
+</div>
+</div>
+</section>
+<!-- SECTION 5: Why Debate Matters (Long-form Storytelling) -->
+<section class="py-32 px-margin-mobile md:px-margin-desktop relative parallax-bg" style="background-image: url(&quot;https://lh3.googleusercontent.com/aida-public/AB6AXuDdsPb4dcCXZemYrC5RbkVCRz9aYfAgcyICfY0cFJeHjd8G0O5hotMxLNoJ75KliaPWrMDSinkpyka79eYooHSH2P7HEtp7xMeBFhkNIMsiki5JjIRYnZu5Ej0M_K_IjVPiPAssQA3lgPtiefkce3r3nVve5csGwziayIgQbzIsrs6bqBg3T8Q_2ZXNTDm90NWN9Xepf_dfjKff-PXDzGRh3LFeL1__1DtHZECc8erg-umsfhuc8Kv7NVMgNdYJKSHdWS6b6caLXI8&quot;);">
+<div class="absolute inset-0 bg-background/90 backdrop-blur-sm z-0"></div>
+<div class="relative z-10 max-w-4xl mx-auto text-center reveal active">
+<span class="material-symbols-outlined text-secondary text-[48px] mb-6 block">auto_stories</span>
+<h2 class="font-display-lg-mobile md:font-display-lg text-display-lg-mobile md:text-display-lg text-on-surface mb-10">Why Debate Matters</h2>
+<div class="text-left font-body-lg text-body-lg text-on-surface-variant space-y-8 columns-1 md:columns-2 gap-12">
+<p class="">
+                    In an era dominated by rapid information consumption and algorithmic echo chambers, the structural art of debate serves as a crucial anchor. It is not merely about persuasion, but about the rigorous testing of ideas against the anvil of opposing thought.
+                </p>
+<p class="">
+                    Historically, the library was not just a repository of books, but a silent arena where the minds of different centuries engaged in dialectic. When we read a text actively, we are entering into a conversation with its author, demanding evidence, questioning premises, and seeking synthesis.
+                </p>
+<p class="">
+                    DebateHelp is constructed to replicate this intellectual friction in a digital space. We strip away the social noise to focus entirely on the anatomy of an argument. By isolating claims, evidence, and logical fallacies, we empower users to see the architecture behind the rhetoric.
+                </p>
+<p class="">
+                    Ultimately, mastering reasoning is the highest form of intellectual self-defense. It allows one to navigate complex moral and political landscapes with clarity, grounded not in emotional reaction, but in considered, defensible principle.
+                </p>
+</div>
+<div class="mt-16">
+<button class="bg-transparent border border-secondary text-secondary font-label-md text-label-md px-10 py-4 rounded hover:bg-secondary/10 transition-colors uppercase tracking-widest">
+                    Join The Academy
+                </button>
+</div>
+</div>
+</section>
+<!-- Footer -->
+<footer class="bg-surface-container-lowest border-t border-outline-variant/30 py-12 px-margin-mobile md:px-margin-desktop">
+<div class="max-w-container-max mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+<div class="font-headline-sm text-headline-sm text-on-surface">DebateHelp</div>
+<div class="flex gap-6 font-label-sm text-label-sm text-on-surface-variant">
+<a class="hover:text-secondary transition-colors" href="#">Manifesto</a>
+<a class="hover:text-secondary transition-colors" href="#">Library</a>
+<a class="hover:text-secondary transition-colors" href="#">Contact</a>
+</div>
+<div class="text-on-surface-variant text-[12px]">
+                © 2024 DebateHelp. All rights reserved.
+            </div>
+</div>
+</footer>
+<script>
+        // Simple Intersection Observer for reveal animations
+        document.addEventListener("DOMContentLoaded", function() {
+            const observerOptions = {
+                root: null,
+                rootMargin: '0px',
+                threshold: 0.15
+            };
+
+            const observer = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('active');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, observerOptions);
+
+            document.querySelectorAll('.reveal').forEach((element) => {
+                observer.observe(element);
+            });
+        });
+    </script>
+
+
+</body></html>

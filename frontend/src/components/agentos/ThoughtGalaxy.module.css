@@ -1,0 +1,89 @@
+.card {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 55% 45%, rgba(108, 142, 255, 0.13), transparent 34%),
+    rgba(22, 24, 29, 0.96);
+  box-shadow: 0 16px 42px var(--shadow);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+.header span {
+  color: var(--blue);
+}
+
+.header strong {
+  color: var(--muted);
+}
+
+.galaxy {
+  display: block;
+  width: 100%;
+  min-height: 280px;
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  background: rgba(15, 17, 22, 0.7);
+  touch-action: none;
+}
+
+.link {
+  stroke: rgba(108, 142, 255, 0.34);
+  stroke-width: 1.3;
+  stroke-linecap: round;
+  animation: linkPulse 2600ms ease-in-out infinite;
+}
+
+.node {
+  cursor: grab;
+}
+
+.node:active {
+  cursor: grabbing;
+}
+
+.node circle {
+  fill: rgba(22, 24, 29, 0.96);
+  stroke: var(--blue);
+  stroke-width: 1.5;
+  filter: drop-shadow(0 8px 18px rgba(108, 142, 255, 0.16));
+}
+
+.center circle {
+  fill: rgba(63, 208, 160, 0.14);
+  stroke: var(--green);
+}
+
+.node text {
+  pointer-events: none;
+  fill: var(--text);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.center text {
+  fill: var(--green);
+}
+
+@keyframes linkPulse {
+  0%,
+  100% {
+    opacity: 0.62;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}

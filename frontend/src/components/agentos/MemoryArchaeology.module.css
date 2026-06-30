@@ -1,0 +1,94 @@
+.card {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background:
+    linear-gradient(145deg, rgba(232, 181, 74, 0.08), rgba(22, 24, 29, 0.96)),
+    rgba(22, 24, 29, 0.96);
+  box-shadow: 0 16px 42px var(--shadow);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+.header span {
+  color: var(--amber);
+}
+
+.header strong {
+  color: var(--muted);
+}
+
+.find {
+  padding: 13px;
+  border: 1px solid rgba(232, 181, 74, 0.32);
+  border-radius: 8px;
+  background: var(--panel-2);
+  animation: reveal 300ms ease both;
+}
+
+.find p {
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+.find h3 {
+  margin: 0 0 8px;
+  color: var(--text);
+  font-size: 1.02rem;
+}
+
+.find span {
+  display: block;
+  color: #d7d5cf;
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.actions button {
+  min-height: 34px;
+  padding: 0 12px;
+  cursor: pointer;
+  border: 1px solid rgba(63, 208, 160, 0.42);
+  border-radius: 6px;
+  background: rgba(63, 208, 160, 0.12);
+  color: var(--green);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+}
+
+.dismiss {
+  border-color: var(--border) !important;
+  background: transparent !important;
+  color: var(--muted) !important;
+}
+
+@keyframes reveal {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

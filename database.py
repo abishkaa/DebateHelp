@@ -1,5 +1,6 @@
 import os
 from collections.abc import AsyncGenerator
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from dotenv import load_dotenv
 from fastapi import HTTPException, status
@@ -22,6 +23,22 @@ class Base(DeclarativeBase):
 
 def _normalize_database_url(url: str) -> str:
     """Accept common Postgres URLs and force the asyncpg SQLAlchemy driver."""
+    parsed = urlsplit(url)
+    query_items: list[tuple[str, str]] = []
+    ssl_mode: str | None = None
+    for key, value in parse_qsl(parsed.query, keep_blank_values=True):
+        if key == "channel_binding":
+            continue
+        if key == "sslmode":
+            ssl_mode = value.lower()
+            continue
+        query_items.append((key, value))
+    if ssl_mode and ssl_mode not in {"disable", "allow"} and not any(
+        key == "ssl" for key, _ in query_items
+    ):
+        query_items.append(("ssl", ssl_mode))
+    query = urlencode(query_items)
+    url = urlunsplit((parsed.scheme, parsed.netloc, parsed.path, query, parsed.fragment))
     if url.startswith("postgres://"):
         return url.replace("postgres://", "postgresql+asyncpg://", 1)
     if url.startswith("postgresql://"):

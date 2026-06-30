@@ -3,19 +3,23 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
+from models.validation import SecureRequestModel, clean_session_id, clean_text
 
-class ChatRequest(BaseModel):
-    message: str = Field(..., min_length=1)
+
+class ChatRequest(SecureRequestModel):
+    message: str = Field(..., min_length=1, max_length=12_000)
     session_id: str = Field(default="default", min_length=1, max_length=120)
     difficulty: Literal["easy", "normal", "hard"] = "normal"
 
-    @field_validator("message", "session_id")
+    @field_validator("message")
     @classmethod
-    def must_not_be_blank(cls, value: str) -> str:
-        stripped = value.strip()
-        if not stripped:
-            raise ValueError("Field cannot be blank")
-        return stripped
+    def valid_message(cls, value: str) -> str:
+        return clean_text(value, allow_multiline=True)
+
+    @field_validator("session_id")
+    @classmethod
+    def valid_session_id(cls, value: str) -> str:
+        return clean_session_id(value)
 
 
 class ChatResponse(BaseModel):
