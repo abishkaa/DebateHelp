@@ -57,7 +57,7 @@ function Register({ navigateTo }) {
   return (
     <AuthLayout
       title="Configure the Vault"
-      subtitle="Personalize the chaos engine before you enter."
+      subtitle="Personalize DebateHelp before you enter."
       variant="setup"
     >
       <form className="auth-form" onSubmit={handleSubmit}>

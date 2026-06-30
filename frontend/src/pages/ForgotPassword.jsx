@@ -60,8 +60,8 @@ function ForgotPassword({ navigateTo }) {
 
   return (
     <AuthLayout
-      title="Recover Logic Key"
-      subtitle="Recover access and keep your battle archive moving."
+      title="Reset password"
+      subtitle="Recover access and keep your debate archive moving."
       variant="login"
       footer={<button type="button" onClick={() => navigateTo('/login')}>Back to login</button>}
     >
@@ -77,7 +77,7 @@ function ForgotPassword({ navigateTo }) {
           onChange={(event) => setEmail(event.target.value)}
         />
         <button className="auth-submit" disabled={loading} type="submit">
-          {loading ? 'Sending reset route...' : 'Send reset route'}
+          {loading ? 'Sending reset link...' : 'Send reset link'}
         </button>
       </form>
 

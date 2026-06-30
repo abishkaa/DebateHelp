@@ -66,8 +66,8 @@ function Signup({ navigateTo }) {
 
   return (
     <AuthLayout
-      title="Create Operator"
-      subtitle="Build your vault, load your battle logs, and start training."
+      title="Create account"
+      subtitle="Build your debate vault and start training."
       variant="signup"
       footer={(
         <>
@@ -143,7 +143,7 @@ function Signup({ navigateTo }) {
         </button>
       </form>
 
-      <div className="auth-divider"><span>BADGE AUTH</span></div>
+      <div className="auth-divider"><span>or continue with</span></div>
 
       <OAuthButtons
         loadingProvider={loadingProvider}

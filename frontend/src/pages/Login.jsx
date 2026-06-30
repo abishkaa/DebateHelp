@@ -66,8 +66,8 @@ function Login({ navigateTo }) {
 
   return (
     <AuthLayout
-      title="Start Riot"
-      subtitle="Operator ID and logic key required."
+      title="Sign in"
+      subtitle="Access your debate workspace."
       variant="login"
       footer={(
         <>
@@ -116,7 +116,7 @@ function Login({ navigateTo }) {
         </div>
 
         <button className="auth-submit" disabled={loading} type="submit">
-          {loading ? 'Connecting...' : 'Start riot'}
+          {loading ? 'Connecting...' : 'Sign in'}
         </button>
       </form>
 

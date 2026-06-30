@@ -90,12 +90,12 @@ function AnalyzePage({ onExport, token }) {
   return (
     <div className="product-page analyze-page">
       <PageHeading
-        title="Battles"
-        description="Pressure-test the claim, load the counterplay, and watch the logic engine expose weak points."
+        title="Analyze"
+        description="Pressure-test the claim, map the counterplay, and find the weak points before your opponent does."
         action={(
           <button className="product-button secondary" type="button" onClick={() => setArgument('')}>
             <RefreshCw size={17} />
-            Reset battle
+            Reset argument
           </button>
         )}
       />
@@ -109,7 +109,7 @@ function AnalyzePage({ onExport, token }) {
 
       <section className="analysis-workspace">
         <article className="product-panel argument-editor">
-          <PanelHeading title="Battle input" meta={`${argument.trim().length} characters`} />
+          <PanelHeading title="Argument input" meta={`${argument.trim().length} characters`} />
           <textarea
             aria-label="Argument to analyze"
             value={argument}
@@ -121,7 +121,7 @@ function AnalyzePage({ onExport, token }) {
             <span>Hard mode applies evidence and causal scrutiny.</span>
             <button className="product-button primary" disabled={loading} type="button" onClick={runAnalysis}>
               {loading ? <RefreshCw className="spin" size={17} /> : <Target size={17} />}
-              {loading ? 'Analyzing...' : 'Deploy logic'}
+              {loading ? 'Analyzing...' : 'Run analysis'}
             </button>
           </div>
         </article>

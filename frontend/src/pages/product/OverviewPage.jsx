@@ -59,12 +59,12 @@ function OverviewPage({ currentUser, navigateTo, onExport, token }) {
   return (
     <div className="product-page overview-page">
       <PageHeading
-        title="Terminal"
-        description="Your debate intelligence at a glance: status, battle logs, coaching signals, and squad activity."
+        title="Dashboard"
+        description="Your debate intelligence at a glance: progress, recent sessions, coaching signals, and team activity."
         action={(
           <button className="product-button secondary" type="button" onClick={() => navigateTo('/app/profile')}>
             <Target size={17} />
-            Tune terminal
+            Tune profile
           </button>
         )}
       />

@@ -42,8 +42,8 @@ function ProfilePage({ currentUser, updateProfile }) {
   return (
     <div className="product-page profile-page">
       <PageHeading
-        title="Scholar's Vault"
-        description="Your neon debate identity, learning trajectory, battle logs, and milestone stash."
+        title="Profile"
+        description="Your debate identity, learning trajectory, saved sessions, and milestones."
         action={(
           <button className="product-button secondary" type="button" onClick={() => editing ? saveProfile() : setEditing(true)}>
             {editing ? <Save size={17} /> : <Edit3 size={17} />}

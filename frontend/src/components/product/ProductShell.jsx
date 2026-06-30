@@ -19,22 +19,22 @@ import {
 } from 'lucide-react'
 
 const NAV_ITEMS = [
-  { label: 'Terminal', path: '/app', icon: LayoutDashboard },
-  { label: 'Battles', path: '/app/analyze', icon: Activity, shortcut: 'A' },
-  { label: 'Live Clash', path: '/app/live', icon: Mic2 },
-  { label: 'Battle Logs', path: '/app/history', icon: History, shortcut: 'H' },
+  { label: 'Dashboard', path: '/app', icon: LayoutDashboard },
+  { label: 'Analyze', path: '/app/analyze', icon: Activity, shortcut: 'A' },
+  { label: 'Live debate', path: '/app/live', icon: Mic2 },
+  { label: 'Archive', path: '/app/history', icon: History, shortcut: 'H' },
   { label: 'Squad', path: '/app/team', icon: Users },
-  { label: 'Strategy', path: '/app/reports', icon: FileText, shortcut: 'E' },
-  { label: 'Vault', path: '/app/profile', icon: UserRound },
+  { label: 'Reports', path: '/app/reports', icon: FileText, shortcut: 'E' },
+  { label: 'Profile', path: '/app/profile', icon: UserRound },
 ]
 
 const COMMANDS = [
-  { label: 'Deploy logic', detail: 'Open the War Room analysis workspace', path: '/app/analyze', icon: Activity },
-  { label: 'New clash', detail: 'Start a fresh argument analysis', path: '/app/analyze?new=1', icon: Zap },
+  { label: 'Analyze argument', detail: 'Open the argument analysis workspace', path: '/app/analyze', icon: Activity },
+  { label: 'New session', detail: 'Start a fresh argument analysis', path: '/app/analyze?new=1', icon: Zap },
   { label: 'Open archives', detail: 'Review previous debates and growth', path: '/app/history', icon: History },
-  { label: 'Start live clash', detail: 'Launch real-time coaching', path: '/app/live', icon: Mic2 },
+  { label: 'Start live debate', detail: 'Launch real-time coaching', path: '/app/live', icon: Mic2 },
   { label: 'Export dossier', detail: 'Generate the current professional PDF', action: 'export', icon: FileText },
-  { label: 'Open litigants', detail: 'Review shared arguments', path: '/app/team', icon: Users },
+  { label: 'Open team', detail: 'Review shared arguments', path: '/app/team', icon: Users },
 ]
 
 function pathIsActive(currentPath, itemPath) {
@@ -110,14 +110,14 @@ function ProductShell({
           <span className="product-brand-mark"><Command size={20} /></span>
           <span>
             <strong>DebateHelp</strong>
-            <small>V0.8.4-OVERLOAD</small>
+            <small>Debate workspace</small>
           </span>
         </button>
 
         <div className="product-operator-card">
-          <span>TERMINAL_OPERATOR</span>
-          <strong>OPERATOR_01</strong>
-          <small>RANK: NEON LOGICIAN</small>
+          <span>Current workspace</span>
+          <strong>Debate room</strong>
+          <small>Strategy mode active</small>
         </div>
 
         <nav className="product-nav" aria-label="Product navigation">
@@ -182,15 +182,15 @@ function ProductShell({
 
           <button className="product-command-trigger" type="button" onClick={() => setPaletteOpen(true)}>
             <Search size={18} />
-            <span>Query database / deploy logic / load replay...</span>
+            <span>Search tools, sessions, reports...</span>
             <kbd>Ctrl K</kbd>
           </button>
 
           <div className="product-hud-tabs" aria-label="War Room status">
-            <span>LOGS</span>
-            <span>NETWORK</span>
-            <span>STABILITY</span>
-            <span>OVERFLOW</span>
+            <span>Sessions</span>
+            <span>Sources</span>
+            <span>Coaching</span>
+            <span>Reports</span>
           </div>
 
           <div className="product-top-actions">
@@ -301,7 +301,7 @@ function CommandPalette({ onClose, onSelect }) {
         <footer>
           <span><kbd>A</kbd> Analyze</span>
           <span><kbd>E</kbd> Export</span>
-          <span><kbd>N</kbd> New debate</span>
+          <span><kbd>N</kbd> New session</span>
           <span><kbd>H</kbd> History</span>
         </footer>
       </section>

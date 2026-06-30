@@ -50,11 +50,11 @@ function HistoryPage({ navigateTo, token }) {
   return (
     <div className="product-page history-page">
       <PageHeading
-        title="Battle archive"
-        description="Replay previous battles, compare scores, and find the logic patterns worth reusing."
+        title="Archive"
+        description="Replay previous debates, compare scores, and find the logic patterns worth reusing."
         action={(
           <button className="product-button primary" type="button" onClick={() => navigateTo('/app/analyze?new=1')}>
-            New battle
+            New analysis
           </button>
         )}
       />

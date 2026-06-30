@@ -119,8 +119,8 @@ function LiveDebatePage({ token }) {
   return (
     <div className="product-page live-page">
       <PageHeading
-        title="Live clash"
-        description="Analyze each speaker in real time, surface weaknesses, and prepare the next counterpunch."
+        title="Live debate"
+        description="Analyze each speaker in real time, surface weaknesses, and prepare the next response."
         action={<span className={`live-session-state ${running ? 'running' : ''}`}><i /> {running ? 'Analysis live' : 'Ready'}</span>}
       />
 
@@ -131,7 +131,7 @@ function LiveDebatePage({ token }) {
           <button className="product-button secondary" type="button" onClick={reset}><RotateCcw size={17} /> Reset</button>
           <button className="product-button primary" type="button" onClick={() => setRunning((current) => !current)}>
             {running ? <Pause size={17} /> : <Play size={17} />}
-            {running ? 'Pause analysis' : 'Start live clash'}
+            {running ? 'Pause analysis' : 'Start live debate'}
           </button>
         </div>
       </section>

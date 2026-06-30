@@ -59,7 +59,7 @@ function LandingPage({ navigateTo }) {
           DEBATEHELP_OS
         </button>
         <nav aria-label="Primary navigation">
-          <a href="#intel">Battles</a>
+          <a href="#intel">Analysis</a>
           <a href="#dossier">Strategy</a>
           <a href="#resistance">Vault</a>
           <button type="button" onClick={openLogin}>Sign in</button>
@@ -101,17 +101,17 @@ function LandingPage({ navigateTo }) {
                 src={IMAGES.hero}
               />
               <div className="du-hero-copy">
-                <p className="du-kicker">Party mode: on // logic stable</p>
-                <h1 id="landing-title">Master The Art</h1>
+                <p className="du-kicker">Debate mode // logic stable</p>
+                <h1 id="landing-title">Master the argument</h1>
                 <p>
-                  Engage in tactical discourse. Dominate the intellectual battlefield with raw, unfiltered logic and cotton-candy aggressive rhetoric.
+                  Pressure-test claims, organize evidence, and build confident rebuttals with a focused AI debate workspace.
                 </p>
                 <div className="du-hero-actions">
                   <button className="du-button primary" type="button" onClick={startSignup}>
-                    Start riot
+                    Start training
                   </button>
                   <a className="du-button secondary" href="#intel">
-                    Query database
+                    Explore tools
                   </a>
                 </div>
               </div>
@@ -134,10 +134,10 @@ function LandingPage({ navigateTo }) {
               ))}
               <aside className="du-protocol-card">
                 <p>TACTICAL_TYPE</p>
-                <strong>VIBE SALTY</strong>
-                <strong>OVERLOAD</strong>
-                <strong>VICTORY</strong>
-                <span>System note: your argument will be stress-tested like it wandered into a neon riot.</span>
+                <strong>CLAIM</strong>
+                <strong>EVIDENCE</strong>
+                <strong>REBUTTAL</strong>
+                <span>System note: every argument is reviewed for structure, proof, and counterplay.</span>
               </aside>
             </div>
           </section>
@@ -155,7 +155,7 @@ function LandingPage({ navigateTo }) {
 
           <section className="du-resistance" id="resistance">
             <span className="du-sticker">ACCESS_GRANTED</span>
-            <h2>Join the Chaos</h2>
+            <h2>Join the workspace</h2>
             <p>
               Enter the vault, train your reasoning, and turn every debate into a sharp, evidence-backed operation.
             </p>
@@ -168,7 +168,7 @@ function LandingPage({ navigateTo }) {
 
       <footer className="du-footer">
         <strong>DEBATEHELP</strong>
-        <span>Party terminal active © 2026</span>
+        <span>Debate workspace active © 2026</span>
       </footer>
     </div>
   )
