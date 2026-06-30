@@ -121,7 +121,7 @@ function OverviewPage({ currentUser, navigateTo, onExport, token }) {
           />
           <div className="session-list">
             {sessionData.slice(0, 3).map((session) => (
-              <button key={session.id} type="button" onClick={() => navigateTo(`/app/history?session=${session.id}`)}>
+              <button key={session.id} type="button" onClick={() => navigateTo(`/app/reports?session=${encodeURIComponent(session.id)}`)}>
                 <span className="session-icon"><TrendingUp size={17} /></span>
                 <span>
                   <strong>{session.title}</strong>

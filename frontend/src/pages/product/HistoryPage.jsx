@@ -4,10 +4,14 @@ import { famousDebates, recentSessions } from '../../data/productData.js'
 import { productApi } from '../../services/productApi.js'
 import { PageHeading } from './OverviewPage.jsx'
 
-function HistoryPage({ navigateTo, token }) {
+function HistoryPage({ currentPath = '', navigateTo, token }) {
   const [query, setQuery] = useState('')
   const [liveSessions, setLiveSessions] = useState([])
   const [syncing, setSyncing] = useState(Boolean(token))
+  const selectedSessionId = useMemo(() => {
+    const queryString = currentPath.split('?')[1] || ''
+    return new URLSearchParams(queryString).get('session') || ''
+  }, [currentPath])
 
   useEffect(() => {
     let active = true
@@ -78,7 +82,12 @@ function HistoryPage({ navigateTo, token }) {
             <span>Session</span><span>Topic</span><span>Date</span><span>Growth</span><span>Score</span><span />
           </div>
           {filtered.map((session) => (
-            <button key={session.id} type="button" onClick={() => navigateTo('/app/reports')}>
+            <button
+              className={selectedSessionId === session.id ? 'selected' : ''}
+              key={session.id}
+              type="button"
+              onClick={() => navigateTo(`/app/reports?session=${encodeURIComponent(session.id)}`)}
+            >
               <span><i><TrendingUp size={17} /></i><strong>{session.title}</strong></span>
               <span>{session.topic}</span>
               <span>{session.date}</span>

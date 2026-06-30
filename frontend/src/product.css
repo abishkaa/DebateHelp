@@ -10979,3 +10979,8 @@ body,
   font-family: "Space Mono", "JetBrains Mono", monospace !important;
   font-size: 0.72rem !important;
 }
+
+.history-table > button.selected {
+  border-color: rgba(0, 245, 255, 0.52) !important;
+  background: rgba(0, 245, 255, 0.1) !important;
+}

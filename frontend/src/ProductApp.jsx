@@ -29,9 +29,9 @@ function ProductApp({
   let page = <OverviewPage currentUser={currentUser} navigateTo={navigateTo} onExport={handleExport} token={token} />
   if (currentPath.startsWith('/app/analyze')) page = <AnalyzePage currentPath={currentPath} onExport={handleExport} token={token} />
   if (currentPath.startsWith('/app/live')) page = <LiveDebatePage currentPath={currentPath} token={token} />
-  if (currentPath.startsWith('/app/history')) page = <HistoryPage navigateTo={navigateTo} token={token} />
+  if (currentPath.startsWith('/app/history')) page = <HistoryPage currentPath={currentPath} navigateTo={navigateTo} token={token} />
   if (currentPath.startsWith('/app/team')) page = <TeamPage />
-  if (currentPath.startsWith('/app/reports')) page = <ReportsPage onExport={handleExport} />
+  if (currentPath.startsWith('/app/reports')) page = <ReportsPage currentPath={currentPath} onExport={handleExport} />
   if (currentPath.startsWith('/app/profile')) {
     page = <ProfilePage currentUser={currentUser} updateProfile={updateProfile} />
   }

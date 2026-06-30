@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   CheckCircle2,
   ChevronRight,
@@ -11,8 +11,20 @@ import {
 import { recentSessions, reportTemplate } from '../../data/productData.js'
 import { PanelHeading, PageHeading } from './OverviewPage.jsx'
 
-function ReportsPage({ onExport }) {
-  const [selected, setSelected] = useState(recentSessions[0])
+function ReportsPage({ currentPath = '', onExport }) {
+  const requestedSessionId = useMemo(() => {
+    const queryString = currentPath.split('?')[1] || ''
+    return new URLSearchParams(queryString).get('session') || ''
+  }, [currentPath])
+  const requestedSession = useMemo(
+    () => recentSessions.find((session) => session.id === requestedSessionId) || recentSessions[0],
+    [requestedSessionId],
+  )
+  const [selected, setSelected] = useState(requestedSession)
+
+  useEffect(() => {
+    setSelected(requestedSession)
+  }, [requestedSession])
   const report = { ...reportTemplate, topic: selected.topic, score: selected.score }
 
   return (
