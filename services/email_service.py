@@ -4,9 +4,9 @@ import smtplib
 from email.message import EmailMessage
 from urllib.parse import urlencode
 
-from dotenv import load_dotenv
+from backend_env import load_backend_env
 
-load_dotenv()
+load_backend_env()
 
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173").rstrip("/")
 ENVIRONMENT = os.getenv("ENV", "development").lower()

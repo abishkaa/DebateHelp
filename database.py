@@ -1,22 +1,28 @@
 import os
 import re
+import logging
 from collections.abc import AsyncGenerator
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
-from dotenv import load_dotenv
 from fastapi import HTTPException, status
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import MetaData, text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.schema import CreateSchema
 
-load_dotenv()
+from backend_env import load_backend_env
+
+load_backend_env()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 DB_SCHEMA = os.getenv("DB_SCHEMA", "debate_coach").strip() or None
 SCHEMA_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]{0,62}$")
+ENVIRONMENT = os.getenv("ENV", "development").lower()
+logger = logging.getLogger(__name__)
 engine: AsyncEngine | None = None
 AsyncSessionLocal: async_sessionmaker[AsyncSession] | None = None
+database_disabled = False
 
 
 if DB_SCHEMA and not SCHEMA_NAME_RE.fullmatch(DB_SCHEMA):
@@ -55,6 +61,9 @@ def _normalize_database_url(url: str) -> str:
 def init_database() -> bool:
     global engine, AsyncSessionLocal
 
+    if database_disabled:
+        return False
+
     if not DATABASE_URL:
         return False
 
@@ -74,26 +83,57 @@ def init_database() -> bool:
     return True
 
 
+def database_required() -> bool:
+    return ENVIRONMENT == "production"
+
+
+async def disable_database(exc: BaseException | None = None) -> None:
+    global engine, AsyncSessionLocal, database_disabled
+
+    if database_required() and exc is not None:
+        raise exc
+
+    database_disabled = True
+
+    if exc is not None:
+        logger.warning(
+            "Database unavailable in development; using in-memory fallback: %s",
+            exc,
+        )
+
+    if engine is not None:
+        await engine.dispose()
+    engine = None
+    AsyncSessionLocal = None
+
+
 async def create_db_and_tables() -> None:
     if not init_database() or engine is None:
         return
 
     import models  # noqa: F401 - registers ORM models before create_all.
 
-    async with engine.begin() as conn:
-        if DB_SCHEMA and DB_SCHEMA != "public":
-            schema_exists = await conn.scalar(
-                text("select exists(select 1 from information_schema.schemata where schema_name = :schema_name)"),
-                {"schema_name": DB_SCHEMA},
-            )
-            if not schema_exists:
-                await conn.execute(CreateSchema(DB_SCHEMA, if_not_exists=True))
-        await conn.run_sync(Base.metadata.create_all)
+    try:
+        async with engine.begin() as conn:
+            if DB_SCHEMA and DB_SCHEMA != "public":
+                schema_exists = await conn.scalar(
+                    text("select exists(select 1 from information_schema.schemata where schema_name = :schema_name)"),
+                    {"schema_name": DB_SCHEMA},
+                )
+                if not schema_exists:
+                    await conn.execute(CreateSchema(DB_SCHEMA, if_not_exists=True))
+            await conn.run_sync(Base.metadata.create_all)
+    except (ConnectionError, OSError, SQLAlchemyError) as exc:
+        await disable_database(exc)
 
 
 async def close_database() -> None:
+    global engine, AsyncSessionLocal
+
     if engine is not None:
         await engine.dispose()
+    engine = None
+    AsyncSessionLocal = None
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
@@ -116,9 +156,13 @@ async def get_optional_db() -> AsyncGenerator[AsyncSession | None, None]:
         yield None
         return
 
-    async with AsyncSessionLocal() as session:
-        try:
-            yield session
-        except Exception:
-            await session.rollback()
-            raise
+    try:
+        async with AsyncSessionLocal() as session:
+            try:
+                yield session
+            except Exception:
+                await session.rollback()
+                raise
+    except (ConnectionError, OSError, SQLAlchemyError) as exc:
+        await disable_database(exc)
+        yield None

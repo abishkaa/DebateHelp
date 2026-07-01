@@ -1,8 +1,9 @@
 import httpx
 import os
-from dotenv import load_dotenv
 
-load_dotenv()
+from backend_env import load_backend_env
+
+load_backend_env()
 
 API_KEY = os.getenv('OYLAN_API_KEY')
 ASSISTANT_ID = os.getenv('OYLAN_ASSISTANT_ID')

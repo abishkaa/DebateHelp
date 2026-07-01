@@ -10,12 +10,12 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, Literal, cast
 
-from dotenv import load_dotenv
 from fastapi import HTTPException, Response, status
 from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend_env import load_backend_env
 from models.auth_security import AuthOneTimeToken, RevokedAccessToken, UserAuthState
 from models.user import ProfileUpdateRequest, SignupRequest, User, UserPublic
 from services.email_service import (
@@ -24,7 +24,7 @@ from services.email_service import (
     send_verification_email,
 )
 
-load_dotenv()
+load_backend_env()
 
 JWT_SECRET = os.getenv("JWT_SECRET", "").strip()
 JWT_EXPIRES_IN = os.getenv("JWT_EXPIRES_IN", "7d")
