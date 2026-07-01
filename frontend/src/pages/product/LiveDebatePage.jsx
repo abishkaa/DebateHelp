@@ -85,8 +85,9 @@ function LiveDebatePage({ currentPath = '', token }) {
         throw new Error(data.detail || fallback)
       }
       setLiveAnalysis(data.reply || '')
+      const computedScore = toScore(data.analysis?.scores?.strength)
       setCustomEntries((current) => current.map((entry) => (
-        entry.id === entryId ? { ...entry, score: estimateStatementScore(statement, data.reply || ''), status: 'Analyzed' } : entry
+        entry.id === entryId ? { ...entry, score: computedScore, status: 'Analyzed' } : entry
       )))
       setSpeaker((current) => current === 'Speaker A' ? 'Speaker B' : 'Speaker A')
     } catch (error) {
@@ -136,7 +137,7 @@ function LiveDebatePage({ currentPath = '', token }) {
                 <div key={entry.id}>
                   <span className={entry.speaker === 'Speaker A' ? 'speaker-a' : 'speaker-b'}>{entry.speaker}</span>
                   <p>{entry.text}</p>
-                  <small>{entry.score ? `${entry.status} - ${entry.score}%` : entry.status}</small>
+                  <small>{typeof entry.score === 'number' ? `${entry.status} - ${entry.score}%` : entry.status}</small>
                 </div>
               )) : (
                 <div className="panel-empty-state compact">
@@ -221,18 +222,15 @@ function createSessionId(prefix) {
   return `${prefix}-${Date.now()}`
 }
 
-function estimateStatementScore(statement, reply) {
-  const text = `${statement} ${reply}`.toLowerCase()
-  let score = 58 + Math.min(16, Math.floor(statement.length / 28))
-  if (/because|therefore|leads to|results in/.test(text)) score += 7
-  if (/study|report|data|research|source|\d/.test(text)) score += 6
-  if (/however|counter|opposing|tradeoff/.test(text)) score += 5
-  return Math.max(35, Math.min(95, score))
+function toScore(value) {
+  const number = Number(value)
+  if (!Number.isFinite(number)) return 0
+  return Math.max(0, Math.min(100, Math.round(number)))
 }
 
 function computeSpeakerScores(entries) {
   return entries.reduce((scores, entry) => {
-    if (!entry.score) return scores
+    if (typeof entry.score !== 'number') return scores
     const current = scores[entry.speaker]
     scores[entry.speaker] = current ? Math.round((current + entry.score) / 2) : entry.score
     return scores

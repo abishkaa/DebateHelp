@@ -31,6 +31,7 @@ function AnalyzePage({ currentPath = '', onExport, token }) {
   const [traceIndex, setTraceIndex] = useState(TRACE_STEPS.length)
   const [error, setError] = useState('')
   const [reply, setReply] = useState('')
+  const [backendAnalysis, setBackendAnalysis] = useState(null)
   const [sessionId, setSessionId] = useState('')
   const [completedAt, setCompletedAt] = useState('')
   const timerRef = useRef(null)
@@ -43,6 +44,7 @@ function AnalyzePage({ currentPath = '', onExport, token }) {
     if (params.get('new') === '1') {
       setArgument('')
       setReply('')
+      setBackendAnalysis(null)
       setSessionId('')
       setCompletedAt('')
       setError('')
@@ -77,6 +79,7 @@ function AnalyzePage({ currentPath = '', onExport, token }) {
     setLoading(true)
     setError('')
     setReply('')
+    setBackendAnalysis(null)
     setTraceIndex(0)
     timerRef.current = window.setInterval(() => {
       setTraceIndex((current) => Math.min(current + 1, TRACE_STEPS.length - 1))
@@ -113,6 +116,7 @@ function AnalyzePage({ currentPath = '', onExport, token }) {
       const data = await response.json()
       if (!data.reply) throw new Error('Analysis service returned an empty response.')
       setReply(data.reply)
+      setBackendAnalysis(data.analysis || null)
       setSessionId(data.session_id || activeSessionId)
       setCompletedAt(new Intl.DateTimeFormat(undefined, { timeStyle: 'medium' }).format(new Date()))
       setTraceIndex(TRACE_STEPS.length)
@@ -124,7 +128,18 @@ function AnalyzePage({ currentPath = '', onExport, token }) {
     }
   }
 
-  const analysis = useMemo(() => buildAnalysis(argument, reply), [argument, reply])
+  const resetAnalysis = () => {
+    setArgument('')
+    setReply('')
+    setBackendAnalysis(null)
+    setSessionId('')
+    setCompletedAt('')
+    setError('')
+    setTraceIndex(TRACE_STEPS.length)
+    sessionIdRef.current = createSessionId('analysis')
+  }
+
+  const analysis = useMemo(() => buildAnalysis(reply, backendAnalysis), [reply, backendAnalysis])
   const exportAnalysisReport = async () => {
     if (!sessionId) {
       setError('Run an analysis before exporting a report.')
@@ -149,7 +164,7 @@ function AnalyzePage({ currentPath = '', onExport, token }) {
         title="Analyze"
         description="Pressure-test the claim, map the counterplay, and find the weak points before your opponent does."
         action={(
-          <button className="product-button secondary" type="button" onClick={() => setArgument('')}>
+          <button className="product-button secondary" type="button" onClick={resetAnalysis}>
             <RefreshCw size={17} />
             Reset argument
           </button>
@@ -206,7 +221,7 @@ function AnalyzePage({ currentPath = '', onExport, token }) {
 
       <section className="analysis-results-grid">
         <article className="product-panel structured-analysis">
-          <PanelHeading title="Strategy output" meta={reply ? 'Updated now' : 'Ready to deploy'} />
+          <PanelHeading title="Strategy output" meta={analysis.method ? 'Real computed analysis' : reply ? 'Updated now' : 'Ready to deploy'} />
           <AnalysisSection
             icon={<Sparkles size={18} />}
             title="Here is the answer"
@@ -246,7 +261,7 @@ function AnalyzePage({ currentPath = '', onExport, token }) {
 
         <div className="analysis-side-stack">
           <article className="product-panel citation-panel" data-product-focus="sources" ref={sourcesRef}>
-            <PanelHeading title="Citation verification" meta={`${analysis.sources.length} real signals`} />
+            <PanelHeading title="Citation verification" meta={`${analysis.sources.length} evidence signals`} />
             {analysis.sources.length ? analysis.sources.map((source) => (
                 <div className="citation-row" key={source.source}>
                   <span className={`citation-status ${source.tone}`}><CheckCircle2 size={17} /></span>
@@ -259,10 +274,26 @@ function AnalyzePage({ currentPath = '', onExport, token }) {
                   <p>Add a source, statistic, study, URL, or year to your argument and run analysis.</p>
                 </div>
               )}
+            {analysis.fallacies.length ? (
+              <div className="analysis-risk-list">
+                <strong>Reasoning risks</strong>
+                {analysis.fallacies.map((fallacy) => (
+                  <div key={`${fallacy.name}-${fallacy.excerpt || fallacy.detail}`}>
+                    <b>{fallacy.name}</b>
+                    <span>{fallacy.detail}</span>
+                  </div>
+                ))}
+              </div>
+            ) : reply ? (
+              <div className="analysis-risk-list clean">
+                <strong>Reasoning risks</strong>
+                <span>No major fallacy pattern was detected by the local analyzer.</span>
+              </div>
+            ) : null}
           </article>
 
           <article className="product-panel coaching-detail">
-            <PanelHeading title="AI debate coach" />
+            <PanelHeading title="AI debate coach" meta={analysis.method ? 'NLP scoring' : undefined} />
             {reply ? (
               <>
                 <div className="coach-callout">
@@ -270,6 +301,13 @@ function AnalyzePage({ currentPath = '', onExport, token }) {
                   <strong>Real analysis saved.</strong>
                 </div>
                 <p>{analysis.coachSummary}</p>
+                {analysis.recommendations.length ? (
+                  <ul>
+                    {analysis.recommendations.map((recommendation) => (
+                      <li key={recommendation}>{recommendation}</li>
+                    ))}
+                  </ul>
+                ) : null}
               </>
             ) : (
               <div className="panel-empty-state compact">
@@ -312,54 +350,71 @@ function AnalysisSection({ icon, title, text }) {
   )
 }
 
-function buildAnalysis(argument, reply) {
-  const normalized = argument.toLowerCase()
-  const hasReply = Boolean(reply)
-  const lengthLift = Math.min(9, Math.floor(argument.length / 45))
-  const hasEvidence = /\d|study|report|data|research|source/.test(normalized)
-  const hasCausality = /because|therefore|leads to|results in/.test(normalized)
-  const strength = hasReply ? Math.min(92, 70 + lengthLift + (hasCausality ? 6 : 0)) : 0
+function buildAnalysis(reply, backendAnalysis) {
+  const scores = backendAnalysis?.scores || {}
+  const hasBackendAnalysis = Boolean(backendAnalysis && Object.keys(scores).length)
+  if (hasBackendAnalysis) {
+    return {
+      strength: toScore(scores.strength),
+      evidence: toScore(scores.evidence),
+      coverage: toScore(scores.coverage),
+      logic: toScore(scores.logic),
+      answer: backendAnalysis.answer || reply || 'The analyzer returned a saved response without a separate answer summary.',
+      why: backendAnalysis.why || 'This score combines claim clarity, evidence, reasoning, clash coverage, readability, and fallacy checks.',
+      evidenceNote: backendAnalysis.evidenceNote || 'No evidence note was returned for this argument.',
+      counterargument: backendAnalysis.counterargument || 'No specific counterargument was detected yet.',
+      change: backendAnalysis.change || 'Revise the claim or evidence, then run analysis again to update the conclusion.',
+      coachSummary: backendAnalysis.coachSummary || summarizeReply(reply),
+      sources: normalizeSources(backendAnalysis.sources),
+      fallacies: normalizeFallacies(backendAnalysis.fallacies),
+      recommendations: Array.isArray(backendAnalysis.recommendations) ? backendAnalysis.recommendations.slice(0, 5) : [],
+      method: backendAnalysis.method || 'computed_analysis',
+      reply,
+    }
+  }
+
   return {
-    strength,
-    evidence: hasReply ? (hasEvidence ? 84 : 42) : 0,
-    coverage: hasReply ? (/(however|although|counter|opposing|tradeoff)/i.test(argument) ? 82 : 48) : 0,
-    logic: hasReply ? (hasCausality ? 86 : 58) : 0,
+    strength: 0,
+    evidence: 0,
+    coverage: 0,
+    logic: 0,
     answer: 'Run an analysis to generate a saved DebateHelp response.',
-    why: hasReply
-      ? 'This section is based on the argument you submitted and the latest backend analysis saved for this session.'
-      : 'No backend analysis has been run for this text yet.',
-    evidenceNote: !hasReply
-      ? 'Citation verification starts after you run the analysis.'
-      : hasEvidence
-      ? 'The argument signals evidence, but each factual claim should be tied to a named source and a measurable outcome.'
-      : 'No concrete statistics or named studies are present. Add at least one source for the main factual claim and one source for implementation tradeoffs.',
-    counterargument: hasReply
-      ? extractCounterSignal(reply)
-      : 'Counterargument guidance appears after a saved analysis response exists.',
-    change: hasReply
-      ? 'Run another analysis after revising your claim to update this saved session and its report.'
-      : 'No conclusion has been generated yet.',
-    coachSummary: summarizeReply(reply),
-    sources: extractCitationSignals(argument),
+    why: 'No backend analysis has been run for this text yet.',
+    evidenceNote: 'Citation verification starts after you run the analysis.',
+    counterargument: 'Counterargument guidance appears after a saved analysis response exists.',
+    change: 'No conclusion has been generated yet.',
+    coachSummary: '',
+    sources: [],
+    fallacies: [],
+    recommendations: [],
+    method: '',
     reply,
   }
 }
 
-function extractCitationSignals(argument) {
-  const matches = argument.match(/https?:\/\/\S+|\b\d{4}\b|\b\d+(?:\.\d+)?%|\b(?:study|report|research|source|data|survey|journal)\b/gi) || []
-  return [...new Set(matches)].slice(0, 6).map((signal) => ({
-    source: signal,
-    detail: signal.startsWith('http') ? 'URL included in your argument' : 'Citation or evidence signal found in your argument',
-    credibility: signal.startsWith('http') ? 75 : 60,
-    tone: signal.startsWith('http') ? 'green' : 'amber',
+function toScore(value) {
+  const number = Number(value)
+  if (!Number.isFinite(number)) return 0
+  return Math.max(0, Math.min(100, Math.round(number)))
+}
+
+function normalizeSources(sources) {
+  if (!Array.isArray(sources)) return []
+  return sources.slice(0, 6).map((source, index) => ({
+    source: source.source || `Evidence signal ${index + 1}`,
+    detail: source.detail || 'Evidence signal detected in the submitted argument.',
+    credibility: toScore(source.credibility ?? 50),
+    tone: source.tone || 'amber',
   }))
 }
 
-function extractCounterSignal(reply) {
-  const sentence = reply
-    .split(/(?<=[.!?])\s+/)
-    .find((item) => /counter|opponent|rebut|however|against|risk/i.test(item))
-  return sentence || 'Use the saved backend response above to identify the strongest opposing line.'
+function normalizeFallacies(fallacies) {
+  if (!Array.isArray(fallacies)) return []
+  return fallacies.slice(0, 4).map((fallacy) => ({
+    name: fallacy.name || 'Reasoning risk',
+    detail: fallacy.detail || 'Review this reasoning step before presenting it.',
+    excerpt: fallacy.excerpt || '',
+  }))
 }
 
 function summarizeReply(reply) {

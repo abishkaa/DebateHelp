@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -25,6 +25,7 @@ class ChatRequest(SecureRequestModel):
 class ChatResponse(BaseModel):
     reply: str
     session_id: str
+    analysis: dict[str, Any] | None = None
 
 
 class HistoryMessage(BaseModel):

@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_optional_db
 from models.chat import ChatRequest, ChatResponse, HistoryResponse
 from services.auth_service import AUTH_COOKIE_NAME, get_user_from_token
+from services.argument_analysis import analyze_argument
 from services.chat import get_history
 from services.chat_service import process_debate_message
 from services.product_service import record_debate_session
@@ -38,6 +39,7 @@ async def chat(
         session_id=storage_session_id,
         difficulty=payload.difficulty,
     )
+    analysis = analyze_argument(payload.message, response_text)
     try:
         await record_debate_session(
             db=db,
@@ -45,10 +47,11 @@ async def chat(
             session_id=storage_session_id,
             message=payload.message,
             reply=response_text,
+            analysis=analysis,
         )
     except Exception:
         logger.exception("Failed to record debate session; returning chat answer anyway.")
-    return {"reply": response_text, "session_id": payload.session_id}
+    return {"reply": response_text, "session_id": payload.session_id, "analysis": analysis}
 
 
 @router.get("/history/{session_id}", response_model=HistoryResponse)

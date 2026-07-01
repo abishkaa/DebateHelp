@@ -11993,3 +11993,49 @@ body,
     margin-bottom: 18px !important;
   }
 }
+
+/* Real analysis details: compact enough for the Stitch cards, but readable. */
+.analysis-risk-list {
+  display: grid !important;
+  gap: 8px !important;
+  padding: 12px 14px 14px !important;
+  border-top: 1px solid var(--border) !important;
+}
+
+.analysis-risk-list > strong {
+  color: var(--red) !important;
+  font-family: var(--font-mono) !important;
+  font-size: 0.72rem !important;
+  letter-spacing: 0.05em !important;
+  text-transform: uppercase !important;
+}
+
+.analysis-risk-list.clean > strong {
+  color: var(--green) !important;
+}
+
+.analysis-risk-list > div {
+  display: grid !important;
+  gap: 3px !important;
+  min-width: 0 !important;
+  padding: 10px !important;
+  border: 1px solid rgba(255, 78, 205, 0.22) !important;
+  border-radius: 10px !important;
+  background: rgba(255, 78, 205, 0.06) !important;
+}
+
+.analysis-risk-list b,
+.analysis-risk-list span {
+  overflow-wrap: anywhere !important;
+}
+
+.analysis-risk-list b {
+  color: #fff !important;
+  font-size: 0.78rem !important;
+}
+
+.analysis-risk-list span {
+  color: var(--muted) !important;
+  font-size: 0.72rem !important;
+  line-height: 1.45 !important;
+}

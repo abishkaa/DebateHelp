@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.product import DebateSession, SharedArgument, TeamMemberInvite
 from models.user import User
+from services.argument_analysis import analyze_argument
 
 _memory_sessions_by_user: dict[str, dict[str, dict[str, Any]]] = {}
 _memory_team_invites_by_owner: dict[str, dict[str, dict[str, Any]]] = {}
@@ -43,13 +44,7 @@ def infer_topic(message: str) -> str:
 
 
 def estimate_score(message: str, reply: str) -> int:
-    text = f"{message} {reply}".lower()
-    score = 64 + min(12, len(message) // 45)
-    score += 5 if re.search(r"because|therefore|leads to|results in", text) else 0
-    score += 5 if re.search(r"study|report|data|evidence|source|research", text) else 0
-    score += 3 if re.search(r"however|counter|opposing|tradeoff", text) else 0
-    score -= 4 if re.search(r"unsupported|weak assumption|uncertain", text) else 0
-    return max(45, min(94, score))
+    return int(analyze_argument(message, reply)["scores"]["strength"])
 
 
 def build_title(topic: str, message: str) -> str:
@@ -66,12 +61,14 @@ async def record_debate_session(
     session_id: str,
     message: str,
     reply: str,
+    analysis: dict[str, Any] | None = None,
 ) -> DebateSession | dict[str, Any]:
+    computed = analysis or analyze_argument(message, reply)
+    topic = str(computed.get("topic") or infer_topic(message))
+    score = int(computed.get("scores", {}).get("strength", estimate_score(message, reply)))
     if db is None:
         user_sessions = _memory_sessions_by_user.setdefault(user_id, {})
         session = user_sessions.get(session_id)
-        topic = infer_topic(message)
-        score = estimate_score(message, reply)
         now = datetime.now(timezone.utc)
 
         if session is None:
@@ -101,9 +98,6 @@ async def record_debate_session(
         )
     )
     session = result.scalar_one_or_none()
-    topic = infer_topic(message)
-    score = estimate_score(message, reply)
-
     if session is None:
         session = DebateSession(
             id=session_id,
@@ -504,45 +498,38 @@ async def build_session_report(
     topic = str(_value(session, "topic"))
     score = int(_value(session, "score"))
     argument_count = int(_value(session, "argument_count"))
+    analysis = analyze_argument(latest_argument, latest_reply)
+    analysis_scores = analysis.get("scores", {})
 
-    key_arguments = _sentences(latest_argument, limit=3) or [
+    key_arguments = list(analysis.get("key_arguments") or []) or [
         f"{_plural(argument_count, 'saved argument entry')} exists for this session."
     ]
-    evidence_terms = re.findall(
-        r"\b(?:study|report|research|source|data|survey|journal|according to|https?://\S+|\d{4}|\d+(?:\.\d+)?%)\b",
-        latest_argument,
-        flags=re.IGNORECASE,
-    )
-    evidence = (
-        [f"Evidence signal found in your saved argument: {_short_excerpt(term, 80)}" for term in evidence_terms[:4]]
-        if evidence_terms
-        else ["No named source, statistic, or citation was present in the latest saved argument."]
-    )
-    reply_sentences = _sentences(latest_reply, limit=4)
+    evidence = list(analysis.get("evidence") or []) or [
+        "No named source, statistic, or citation was present in the latest saved argument."
+    ]
+    fallacy_items = list(analysis.get("fallacies") or [])
     risks = [
-        sentence for sentence in reply_sentences
-        if re.search(r"\b(?:risk|weak|gap|assumption|fallac|unsupported|missing)\b", sentence, re.IGNORECASE)
-    ][:3]
-    if not risks and latest_reply:
-        risks = [f"DebateHelp response note: {_short_excerpt(latest_reply)}"]
-    if not risks:
-        risks = ["No assistant risk review is saved for this session yet."]
+        f"{item.get('name', 'Reasoning risk')}: {item.get('detail', 'Review this reasoning step.')}"
+        for item in fallacy_items[:4]
+        if isinstance(item, dict)
+    ] or [str(analysis.get("fallacyNote") or "No major fallacy pattern was detected by the local analyzer.")]
 
-    counters = [
-        sentence for sentence in reply_sentences
-        if re.search(r"\b(?:counter|opponent|rebut|however|against)\b", sentence, re.IGNORECASE)
-    ][:3]
-    if not counters and latest_reply:
-        counters = [f"Use the saved assistant response to prepare rebuttals: {_short_excerpt(latest_reply)}"]
-    if not counters:
-        counters = ["No saved counterargument guidance is available yet."]
+    counters = list(analysis.get("counterarguments") or []) or [
+        "No saved counterargument guidance is available yet."
+    ]
 
     recommendation = (
-        f"Use the latest saved DebateHelp response to revise this {topic} session. "
-        f"Current real score is {score}%, across {argument_count} saved argument "
+        f"Revise this {topic} session using the computed analysis: "
+        f"overall {score}%, evidence {int(analysis_scores.get('evidence', 0))}%, "
+        f"reasoning {int(analysis_scores.get('reasoning', 0))}%, "
+        f"counter coverage {int(analysis_scores.get('coverage', 0))}%. "
+        f"This report is based on {argument_count} saved argument "
         f"{'entry' if argument_count == 1 else 'entries'}."
     )
-    if latest_reply:
+    first_tip = next(iter(analysis.get("recommendations") or []), "")
+    if first_tip:
+        recommendation += f" Next step: {first_tip}"
+    elif latest_reply:
         recommendation += f" Most recent coaching: {_short_excerpt(latest_reply, 220)}"
 
     return {
