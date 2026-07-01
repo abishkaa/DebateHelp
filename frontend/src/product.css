@@ -10984,3 +10984,123 @@ body,
   border-color: rgba(0, 245, 255, 0.52) !important;
   background: rgba(0, 245, 255, 0.1) !important;
 }
+
+/* Readability pass: keep the Stitch neon style, but make button labels unmistakable. */
+.du-topbar nav button,
+.du-button,
+.stitch-button,
+.editorial-button,
+.auth-submit,
+.oauth-button,
+.auth-alert-actions button,
+.auth-upload input::file-selector-button,
+.auth-upload-preview button,
+.profile-image-control input::file-selector-button,
+.product-button,
+.product-nav button,
+.product-war-start,
+.product-command-trigger,
+.product-hud-tabs button,
+.product-top-actions button,
+.product-panel-heading button,
+.panel-action,
+.coach-panel > button,
+.quick-actions button,
+.session-list button,
+.history-table > button,
+.professional-empty button,
+.shared-argument-list button,
+.report-session-list button,
+.command-list button,
+.product-mobile-tabs button,
+.team-modal button {
+  font-weight: 900 !important;
+  text-rendering: geometricPrecision !important;
+}
+
+.product-button,
+.product-war-start,
+.auth-submit,
+.du-button,
+.stitch-button,
+.editorial-button,
+.panel-action,
+.coach-panel > button {
+  color: #050509 !important;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.28) !important;
+}
+
+.product-button.secondary,
+.du-button.secondary,
+.stitch-button.secondary,
+.stitch-button.ghost,
+.editorial-button.outline,
+.oauth-button,
+.panel-action,
+.coach-panel > button,
+.product-command-trigger,
+.product-nav button,
+.product-panel-heading button,
+.quick-actions button,
+.session-list button,
+.history-table > button,
+.professional-empty button,
+.shared-argument-list button,
+.report-session-list button,
+.command-list button,
+.product-mobile-tabs button,
+.team-modal button {
+  color: #f8fbff !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.82) !important;
+}
+
+.product-nav button span,
+.product-command-trigger span,
+.product-panel-heading button,
+.panel-action,
+.coach-panel > button,
+.quick-actions strong,
+.session-list strong,
+.history-table > button strong,
+.professional-empty button strong,
+.shared-argument-list strong,
+.report-session-list strong,
+.command-list strong,
+.product-mobile-tabs button span {
+  font-weight: 900 !important;
+}
+
+.quick-actions small,
+.session-list small,
+.shared-argument-list small,
+.shared-argument-list em,
+.report-session-list small,
+.command-list small,
+.professional-empty button span {
+  color: rgba(248, 251, 255, 0.82) !important;
+  font-weight: 800 !important;
+}
+
+.product-hud-tabs button {
+  min-height: 28px !important;
+  padding: 4px 11px !important;
+  color: #e8ff8f !important;
+  font-size: 0.72rem !important;
+  font-weight: 950 !important;
+  letter-spacing: 0 !important;
+  text-shadow:
+    0 1px 1px rgba(0, 0, 0, 0.92),
+    0 0 10px rgba(168, 255, 56, 0.32) !important;
+}
+
+.product-hud-tabs button:hover,
+.product-hud-tabs button:focus-visible,
+.product-hud-tabs button.active {
+  color: #f6ffff !important;
+}
+
+.product-top-actions button svg,
+.product-nav button svg,
+.product-mobile-tabs button svg {
+  stroke-width: 2.6 !important;
+}
