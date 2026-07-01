@@ -12,9 +12,9 @@ import {
   Target,
 } from 'lucide-react'
 import { productApi } from '../../services/productApi.js'
+import { buildApiUrl, networkErrorMessage } from '../../services/apiConfig.js'
 import { PanelHeading, PageHeading } from './OverviewPage.jsx'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.PROD ? '' : 'http://localhost:8001')
 const TRACE_STEPS = [
   'Parsing the claim and debate context',
   'Checking prior session history',
@@ -84,22 +84,30 @@ function AnalyzePage({ currentPath = '', onExport, token }) {
 
     try {
       const activeSessionId = sessionIdRef.current
-      const response = await fetch(`${API_BASE_URL}/chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          message: submitted,
-          session_id: activeSessionId,
-          difficulty: 'hard',
-        }),
-      })
+      let response
+      try {
+        response = await fetch(buildApiUrl('/chat'), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            message: submitted,
+            session_id: activeSessionId,
+            difficulty: 'hard',
+          }),
+        })
+      } catch {
+        throw new Error(networkErrorMessage('analysis service'))
+      }
 
       if (!response.ok) {
         const data = await response.json().catch(() => ({}))
-        throw new Error(data.detail || `Analysis failed with status ${response.status}.`)
+        const fallback = response.status >= 500
+          ? networkErrorMessage('analysis service')
+          : `Analysis failed with status ${response.status}.`
+        throw new Error(data.detail || fallback)
       }
 
       const data = await response.json()

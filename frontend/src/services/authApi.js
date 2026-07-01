@@ -1,4 +1,5 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.PROD ? '' : 'http://localhost:8001')
+import { API_BASE_URL, buildApiUrl, networkErrorMessage } from './apiConfig.js'
+
 const LOCAL_TOKEN_KEY = 'debate_auth_token'
 const SESSION_TOKEN_KEY = 'debate_auth_session_token'
 
@@ -44,16 +45,24 @@ async function request(path, { method = 'GET', body } = {}) {
     'Content-Type': 'application/json',
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-    credentials: 'include',
-  })
+  let response
+  try {
+    response = await fetch(buildApiUrl(path), {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+      credentials: 'include',
+    })
+  } catch {
+    throw new Error(networkErrorMessage('account server'))
+  }
 
   const data = await response.json().catch(() => ({}))
   if (!response.ok) {
-    throw new Error(errorMessage(data, 'Something went wrong. Please try again.'))
+    const fallback = response.status >= 500
+      ? networkErrorMessage('account server')
+      : 'Something went wrong. Please try again.'
+    throw new Error(errorMessage(data, fallback))
   }
 
   return data

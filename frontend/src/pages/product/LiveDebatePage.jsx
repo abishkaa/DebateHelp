@@ -10,9 +10,9 @@ import {
   Sparkles,
   Timer,
 } from 'lucide-react'
+import { buildApiUrl, networkErrorMessage } from '../../services/apiConfig.js'
 import { PanelHeading, PageHeading } from './OverviewPage.jsx'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.PROD ? '' : 'http://localhost:8001')
 function LiveDebatePage({ currentPath = '', token }) {
   const [running, setRunning] = useState(false)
   const [elapsed, setElapsed] = useState(0)
@@ -60,21 +60,29 @@ function LiveDebatePage({ currentPath = '', token }) {
 
     try {
       const sessionId = sessionIdRef.current
-      const response = await fetch(`${API_BASE_URL}/chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          message: `Live debate. ${currentSpeaker}: ${statement}`,
-          session_id: sessionId,
-          difficulty: 'hard',
-        }),
-      })
+      let response
+      try {
+        response = await fetch(buildApiUrl('/chat'), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            message: `Live debate. ${currentSpeaker}: ${statement}`,
+            session_id: sessionId,
+            difficulty: 'hard',
+          }),
+        })
+      } catch {
+        throw new Error(networkErrorMessage('live analysis service'))
+      }
       const data = await response.json().catch(() => ({}))
       if (!response.ok) {
-        throw new Error(data.detail || 'Live analysis failed.')
+        const fallback = response.status >= 500
+          ? networkErrorMessage('live analysis service')
+          : 'Live analysis failed.'
+        throw new Error(data.detail || fallback)
       }
       setLiveAnalysis(data.reply || '')
       setCustomEntries((current) => current.map((entry) => (

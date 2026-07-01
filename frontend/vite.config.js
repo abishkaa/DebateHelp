@@ -3,7 +3,10 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  const apiBaseUrl = env.VITE_API_BASE_URL ?? (mode === 'production' ? '' : 'http://localhost:8001')
+  const configuredApiBaseUrl = env.VITE_API_BASE_URL
+  const apiBaseUrl = configuredApiBaseUrl ?? (mode === 'production' ? '' : '/api')
+  const proxyTarget = env.VITE_DEV_API_PROXY_TARGET
+    ?? (/^https?:\/\//.test(configuredApiBaseUrl || '') ? configuredApiBaseUrl : 'http://localhost:8001')
   const apiOrigin = /^https?:\/\//.test(apiBaseUrl) ? new URL(apiBaseUrl).origin : ''
   const stylePolicy = mode === 'production' ? "'self'" : "'self' 'unsafe-inline'"
 
@@ -23,7 +26,7 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       proxy: {
         '/api': {
-          target: apiBaseUrl,
+          target: proxyTarget,
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/api/, ''),
         },

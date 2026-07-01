@@ -11929,3 +11929,67 @@ body,
     padding-block: 14px !important;
   }
 }
+
+/* Auth layout rescue: keep Stitch styling while preventing narrow-screen clipping. */
+.auth-shell {
+  width: 100% !important;
+  min-width: 0 !important;
+  overflow-x: clip !important;
+}
+
+.auth-card,
+.auth-form,
+.auth-field,
+.auth-input-wrap,
+.auth-alert,
+.auth-submit,
+.oauth-group,
+.auth-divider,
+.auth-footer {
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+}
+
+.auth-card {
+  justify-self: center !important;
+}
+
+.auth-card-heading h2,
+.auth-alert,
+.auth-field input,
+.auth-field textarea,
+.auth-field select {
+  overflow-wrap: anywhere !important;
+}
+
+.auth-alert {
+  display: grid !important;
+  gap: 8px !important;
+}
+
+@media (max-width: 520px) {
+  .auth-shell {
+    grid-template-columns: minmax(0, 1fr) !important;
+    padding: 16px !important;
+  }
+
+  .auth-hero {
+    display: none !important;
+  }
+
+  .auth-card {
+    width: min(100%, 420px) !important;
+    padding: 22px 18px !important;
+    border-radius: 24px !important;
+  }
+
+  .auth-card-heading h2 {
+    font-size: clamp(2rem, 13vw, 3rem) !important;
+    line-height: 0.96 !important;
+  }
+
+  .auth-card-heading {
+    margin-bottom: 18px !important;
+  }
+}
