@@ -7,6 +7,8 @@ from urllib.parse import urlencode
 import httpx
 from fastapi import HTTPException, Request, status
 
+from models.validation import clean_email
+
 
 @dataclass(frozen=True)
 class OAuthProvider:
@@ -155,7 +157,19 @@ async def exchange_code_for_token(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=f"{config.display_name} sign-in failed while exchanging the authorization code.",
         )
-    return response.json()
+    try:
+        data = response.json()
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"{config.display_name} returned an unreadable sign-in response.",
+        ) from exc
+    if not isinstance(data, dict):
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"{config.display_name} returned an unexpected sign-in response.",
+        )
+    return data
 
 
 async def fetch_google_profile(access_token: str) -> dict[str, Any]:
@@ -187,7 +201,7 @@ async def fetch_github_profile(access_token: str) -> dict[str, Any]:
         verified_emails = [
             item
             for item in emails
-            if item.get("email") and item.get("verified")
+            if isinstance(item, dict) and item.get("email") and item.get("verified")
         ]
         primary_email = next(
             (item.get("email") for item in verified_emails if item.get("primary")),
@@ -218,14 +232,20 @@ async def get_json(url: str, access_token: str, provider_name: str) -> Any:
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=f"{provider_name} sign-in failed while loading your profile.",
         )
-    return response.json()
+    try:
+        return response.json()
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"{provider_name} returned an unreadable profile response.",
+        ) from exc
 
 
 def normalize_profile_email(value: Any, provider_name: str) -> str:
-    email = str(value or "").strip().lower()
-    if "@" not in email:
+    try:
+        return clean_email(str(value or ""))
+    except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"{provider_name} did not share a verified email address.",
-        )
-    return email
+        ) from exc

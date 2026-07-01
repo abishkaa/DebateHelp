@@ -7,6 +7,10 @@ from models.product import DashboardResponse, SessionHistoryResponse
 from services.auth_service import AUTH_COOKIE_NAME, auth_error, get_user_from_token
 from services.product_service import build_dashboard, get_user_sessions, serialize_session
 
+
+def session_score(session) -> int:
+    return int(session["score"] if isinstance(session, dict) else session.score)
+
 router = APIRouter(prefix="/product", tags=["product"])
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -41,6 +45,6 @@ async def sessions(
     user_sessions = await get_user_sessions(db, user_id)
     serialized = []
     for index, session in enumerate(user_sessions):
-        previous = user_sessions[index + 1].score if index + 1 < len(user_sessions) else None
+        previous = session_score(user_sessions[index + 1]) if index + 1 < len(user_sessions) else None
         serialized.append(serialize_session(session, previous))
     return {"sessions": serialized}

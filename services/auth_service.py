@@ -13,6 +13,7 @@ from typing import Any, Literal, cast
 from dotenv import load_dotenv
 from fastapi import HTTPException, Response, status
 from sqlalchemy import delete, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.auth_security import AuthOneTimeToken, RevokedAccessToken, UserAuthState
@@ -389,7 +390,15 @@ async def create_user(db: AsyncSession | None, request: SignupRequest) -> tuple[
             profile_completed=False,
         )
         db.add(user)
-        await db.commit()
+        try:
+            await db.commit()
+        except IntegrityError as exc:
+            await db.rollback()
+            hash_password(request.password)
+            raise auth_error(
+                "An account with this email already exists. Sign in instead, or reset your password if you forgot it.",
+                status.HTTP_409_CONFLICT,
+            ) from exc
         await db.refresh(user)
 
     if verification_token is not None:
@@ -515,7 +524,23 @@ async def find_or_create_oauth_user(
         profile_completed=False,
     )
     db.add(user)
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        existing = await find_user_by_email(db, email)
+        if existing:
+            existing.is_verified = True
+            if not existing.full_name and full_name:
+                existing.full_name = full_name
+            if not existing.profile_image_url and profile_image_url:
+                existing.profile_image_url = profile_image_url
+            if existing.auth_provider == "email":
+                existing.auth_provider = provider
+            await db.commit()
+            await db.refresh(existing)
+            return existing
+        raise
     await db.refresh(user)
     return user
 

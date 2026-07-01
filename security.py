@@ -59,9 +59,10 @@ SENSITIVE_AUTH_PATHS = {
     "/auth/forgot-password",
     "/auth/reset-password",
     "/auth/verify-email",
-    "/auth/oauth/google",
-    "/auth/oauth/github",
 }
+SENSITIVE_AUTH_PREFIXES = (
+    "/auth/oauth/",
+)
 
 
 @dataclass(frozen=True)
@@ -258,6 +259,13 @@ def _limited_response(result: RateLimitResult) -> JSONResponse:
     )
 
 
+def is_sensitive_auth_path(path: str) -> bool:
+    return path in SENSITIVE_AUTH_PATHS or any(
+        path.startswith(prefix)
+        for prefix in SENSITIVE_AUTH_PREFIXES
+    )
+
+
 def normalize_origin(value: str) -> str:
     raw_value = value.strip().rstrip("/")
     if not raw_value:
@@ -379,7 +387,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
                 return self._secure(_limited_response(global_result), request.url.path)
 
             selected_result = global_result
-            if request.url.path in SENSITIVE_AUTH_PATHS:
+            if is_sensitive_auth_path(request.url.path):
                 try:
                     auth_result = await request_limiter.hit(
                         f"auth-route:{request.url.path}:{remote}",

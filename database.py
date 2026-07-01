@@ -1,4 +1,5 @@
 import os
+import re
 from collections.abc import AsyncGenerator
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
@@ -13,8 +14,13 @@ load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 DB_SCHEMA = os.getenv("DB_SCHEMA", "debate_coach").strip() or None
+SCHEMA_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]{0,62}$")
 engine: AsyncEngine | None = None
 AsyncSessionLocal: async_sessionmaker[AsyncSession] | None = None
+
+
+if DB_SCHEMA and not SCHEMA_NAME_RE.fullmatch(DB_SCHEMA):
+    raise RuntimeError("DB_SCHEMA must be a valid Postgres identifier.")
 
 
 class Base(DeclarativeBase):
@@ -54,7 +60,11 @@ def init_database() -> bool:
 
     if engine is None:
         echo_sql = os.getenv("SQLALCHEMY_ECHO", "").lower() in {"1", "true", "yes"}
-        engine = create_async_engine(_normalize_database_url(DATABASE_URL), echo=echo_sql)
+        engine = create_async_engine(
+            _normalize_database_url(DATABASE_URL),
+            echo=echo_sql,
+            pool_pre_ping=True,
+        )
         AsyncSessionLocal = async_sessionmaker(
             bind=engine,
             class_=AsyncSession,
@@ -94,7 +104,11 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
         )
 
     async with AsyncSessionLocal() as session:
-        yield session
+        try:
+            yield session
+        except Exception:
+            await session.rollback()
+            raise
 
 
 async def get_optional_db() -> AsyncGenerator[AsyncSession | None, None]:
@@ -103,4 +117,8 @@ async def get_optional_db() -> AsyncGenerator[AsyncSession | None, None]:
         return
 
     async with AsyncSessionLocal() as session:
-        yield session
+        try:
+            yield session
+        except Exception:
+            await session.rollback()
+            raise
