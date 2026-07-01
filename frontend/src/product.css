@@ -12039,3 +12039,79 @@ body,
   font-size: 0.72rem !important;
   line-height: 1.45 !important;
 }
+
+/* Live debate real-session controls. */
+.speaker-toggle {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+}
+
+.speaker-toggle button {
+  min-width: 0 !important;
+  min-height: 38px !important;
+  padding: 0 10px !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(0, 229, 255, 0.28) !important;
+  border-radius: 10px !important;
+  background: rgba(0, 229, 255, 0.06) !important;
+  color: var(--muted) !important;
+  font-family: var(--font-mono) !important;
+  font-size: 0.7rem !important;
+  font-weight: 900 !important;
+  text-overflow: ellipsis !important;
+  text-transform: uppercase !important;
+  white-space: nowrap !important;
+  cursor: pointer !important;
+}
+
+.speaker-toggle button.active {
+  border-color: var(--blue) !important;
+  background: rgba(0, 229, 255, 0.16) !important;
+  color: #fff !important;
+  box-shadow: 0 0 18px rgba(0, 229, 255, 0.14) !important;
+}
+
+.speaker-toggle button:disabled {
+  cursor: not-allowed !important;
+  opacity: 0.64 !important;
+}
+
+.live-error {
+  padding: 10px 12px !important;
+  border: 1px solid rgba(255, 83, 112, 0.45) !important;
+  border-radius: 10px !important;
+  background: rgba(255, 83, 112, 0.08) !important;
+  color: var(--red) !important;
+  font-size: 0.76rem !important;
+  font-weight: 900 !important;
+}
+
+.live-session-meta {
+  color: var(--muted) !important;
+  font-family: var(--font-mono) !important;
+  font-size: 0.62rem !important;
+  overflow-wrap: anywhere !important;
+}
+
+.live-signal-list > div.green svg {
+  color: var(--green) !important;
+}
+
+.live-signal-list > div.amber svg {
+  color: var(--amber) !important;
+}
+
+.live-signal-list > div.red svg {
+  color: var(--red) !important;
+}
+
+@media (max-width: 720px) {
+  .speaker-toggle {
+    grid-template-columns: 1fr !important;
+  }
+
+  .live-statements > div {
+    grid-template-columns: 1fr !important;
+  }
+}
