@@ -14,6 +14,7 @@ function ensurePage(doc, y, needed = 28) {
 }
 
 function addSection(doc, title, items, y) {
+  const safeItems = Array.isArray(items) && items.length > 0 ? items : ['No items provided yet.']
   const nextY = ensurePage(doc, y, 34)
   doc.setDrawColor(42, 45, 53)
   doc.line(18, nextY, 192, nextY)
@@ -27,11 +28,11 @@ function addSection(doc, title, items, y) {
   doc.setFontSize(9)
   doc.setTextColor(55, 58, 65)
 
-  items.forEach((item) => {
+  safeItems.forEach((item) => {
     cursor = ensurePage(doc, cursor, 18)
     doc.setFillColor(108, 142, 255)
     doc.circle(20, cursor - 1.5, 1.1, 'F')
-    cursor = addWrappedText(doc, item, 25, cursor, 164, 4.5) + 4
+    cursor = addWrappedText(doc, String(item), 25, cursor, 164, 4.5) + 4
   })
 
   return cursor + 2
@@ -39,6 +40,15 @@ function addSection(doc, title, items, y) {
 
 export async function exportDebateReport(report) {
   const { jsPDF } = await import('jspdf')
+  const safeReport = {
+    topic: report?.topic || 'Debate Analysis',
+    score: Number.isFinite(Number(report?.score)) ? Number(report.score) : 0,
+    recommendation: report?.recommendation || 'Keep refining the argument with clearer evidence, counterarguments, and a concise final claim.',
+    keyArguments: report?.keyArguments,
+    evidence: report?.evidence,
+    fallacies: report?.fallacies,
+    counterarguments: report?.counterarguments,
+  }
   const doc = new jsPDF({ unit: 'mm', format: 'a4' })
   const generatedAt = new Intl.DateTimeFormat(undefined, {
     dateStyle: 'medium',
@@ -66,7 +76,7 @@ export async function exportDebateReport(report) {
   doc.setTextColor(14, 15, 18)
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(16)
-  doc.text(`${report.score}%`, 178.5, 27, { align: 'center' })
+  doc.text(`${safeReport.score}%`, 178.5, 27, { align: 'center' })
   doc.setFontSize(7)
   doc.text('PERSUASIVENESS', 178.5, 33, { align: 'center' })
 
@@ -75,13 +85,13 @@ export async function exportDebateReport(report) {
   doc.setFontSize(10)
   doc.text('Topic', 18, 68)
   doc.setFontSize(17)
-  doc.text(report.topic, 18, 78)
+  doc.text(String(safeReport.topic), 18, 78)
 
   let y = 90
-  y = addSection(doc, 'Key Arguments', report.keyArguments, y)
-  y = addSection(doc, 'Evidence Assessment', report.evidence, y)
-  y = addSection(doc, 'Logical Fallacies and Risks', report.fallacies, y)
-  y = addSection(doc, 'Counterarguments', report.counterarguments, y)
+  y = addSection(doc, 'Key Arguments', safeReport.keyArguments, y)
+  y = addSection(doc, 'Evidence Assessment', safeReport.evidence, y)
+  y = addSection(doc, 'Logical Fallacies and Risks', safeReport.fallacies, y)
+  y = addSection(doc, 'Counterarguments', safeReport.counterarguments, y)
 
   y = ensurePage(doc, y, 38)
   doc.setFillColor(239, 242, 255)
@@ -93,7 +103,7 @@ export async function exportDebateReport(report) {
   doc.setTextColor(35, 38, 44)
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(9)
-  addWrappedText(doc, report.recommendation, 24, y + 18, 160, 4.5)
+  addWrappedText(doc, safeReport.recommendation, 24, y + 18, 160, 4.5)
 
   const pages = doc.getNumberOfPages()
   for (let pageNumber = 1; pageNumber <= pages; pageNumber += 1) {
@@ -107,6 +117,6 @@ export async function exportDebateReport(report) {
     doc.text(`${pageNumber} / ${pages}`, 192, 291, { align: 'right' })
   }
 
-  const filename = `DebateHelp-${report.topic.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.pdf`
+  const filename = `DebateHelp-${safeReport.topic.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.pdf`
   doc.save(filename)
 }

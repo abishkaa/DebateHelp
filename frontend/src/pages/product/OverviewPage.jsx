@@ -208,7 +208,7 @@ function OverviewPage({ currentUser, navigateTo, onExport, token }) {
           <button type="button" onClick={() => navigateTo('/app/live')}>
             <Circle size={18} /><span><strong>Start live debate</strong><small>Real-time debate with coaching</small></span><ArrowRight size={16} />
           </button>
-          <button type="button" onClick={onExport}>
+          <button type="button" onClick={() => onExport()}>
             <FileDown size={18} /><span><strong>Export professional report</strong><small>Generate a consulting-grade PDF</small></span><ArrowRight size={16} />
           </button>
         </article>

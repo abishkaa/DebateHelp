@@ -19,7 +19,8 @@ function ProductApp({
   updateProfile,
 }) {
   const handleExport = useCallback((customReport = reportTemplate) => {
-    exportDebateReport(customReport)
+    const report = customReport?.nativeEvent ? reportTemplate : customReport
+    exportDebateReport(report || reportTemplate)
   }, [])
 
   useEffect(() => {
