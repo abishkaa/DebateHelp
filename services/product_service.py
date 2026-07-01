@@ -1,19 +1,29 @@
 from datetime import datetime, timedelta, timezone
 import re
 from typing import Any
+import uuid
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from models.product import DebateSession
+from models.product import DebateSession, TeamMemberInvite
+from models.user import User
 
 _memory_sessions_by_user: dict[str, dict[str, dict[str, Any]]] = {}
+_memory_team_invites_by_owner: dict[str, dict[str, dict[str, Any]]] = {}
 
 
-def _value(session: DebateSession | dict[str, Any], key: str):
-    if isinstance(session, dict):
-        return session[key]
-    return getattr(session, key)
+def _value(item: Any, key: str):
+    if isinstance(item, dict):
+        return item[key]
+    return getattr(item, key)
+
+
+def _optional_value(item: Any, key: str, default: Any = None):
+    if isinstance(item, dict):
+        return item.get(key, default)
+    return getattr(item, key, default)
 
 
 def infer_topic(message: str) -> str:
@@ -159,6 +169,181 @@ def _bounded_progress(current: int, target: int) -> int:
     if target <= 0:
         return 0
     return min(100, round(current / target * 100))
+
+
+def _name_from_email(email: str) -> str:
+    return (
+        " ".join(
+            part.capitalize()
+            for part in email.split("@", 1)[0].replace("-", ".").replace("_", ".").split(".")
+            if part
+        )
+        or "Invited Member"
+    )
+
+
+def _initials(name: str) -> str:
+    return (
+        "".join(part[0] for part in name.split()[:2] if part).upper()
+        or "IM"
+    )
+
+
+def _serialize_current_member(user: User | dict[str, Any]) -> dict[str, object]:
+    name = str(_value(user, "full_name") or _value(user, "email"))
+    return {
+        "id": str(_value(user, "id")),
+        "email": str(_value(user, "email")),
+        "name": name,
+        "initials": _initials(name),
+        "role": str(_optional_value(user, "role", "Workspace owner") or "Workspace owner"),
+        "status": "Active",
+        "tone": "green",
+        "is_current": True,
+    }
+
+
+def _serialize_invited_member(
+    invite: TeamMemberInvite | dict[str, Any],
+    matched_user: User | dict[str, Any] | None = None,
+) -> dict[str, object]:
+    email = str(_value(invite, "email"))
+    name = (
+        str(_value(matched_user, "full_name"))
+        if matched_user is not None
+        else str(_optional_value(invite, "name", "") or _name_from_email(email))
+    )
+    is_active = matched_user is not None
+    return {
+        "id": str(_value(invite, "id")),
+        "email": email,
+        "name": name,
+        "initials": _initials(name),
+        "role": str(_optional_value(invite, "role", "Debater") or "Debater"),
+        "status": "Active" if is_active else str(_optional_value(invite, "status", "Invited") or "Invited"),
+        "tone": "green" if is_active else "amber",
+        "is_current": False,
+    }
+
+
+async def get_team_members(
+    db: AsyncSession | None,
+    current_user: User | dict[str, Any],
+) -> list[dict[str, object]]:
+    owner_id = str(_value(current_user, "id"))
+    current_email = str(_value(current_user, "email"))
+    members = [_serialize_current_member(current_user)]
+
+    if db is None:
+        invites = list(_memory_team_invites_by_owner.get(owner_id, {}).values())
+        if not invites:
+            return members
+
+        from services.auth_service import find_user_by_email
+
+        for invite in sorted(invites, key=lambda item: _value(item, "updated_at"), reverse=True):
+            email = str(_value(invite, "email"))
+            if email == current_email:
+                continue
+            matched_user = await find_user_by_email(None, email)
+            members.append(_serialize_invited_member(invite, matched_user))
+        return members
+
+    result = await db.execute(
+        select(TeamMemberInvite)
+        .where(TeamMemberInvite.workspace_owner_user_id == owner_id)
+        .order_by(TeamMemberInvite.updated_at.desc())
+    )
+    invites = list(result.scalars().all())
+    if not invites:
+        return members
+
+    emails = [invite.email for invite in invites if invite.email != current_email]
+    users_by_email: dict[str, User] = {}
+    if emails:
+        user_result = await db.execute(select(User).where(User.email.in_(emails)))
+        users_by_email = {user.email: user for user in user_result.scalars().all()}
+
+    for invite in invites:
+        if invite.email == current_email:
+            continue
+        members.append(_serialize_invited_member(invite, users_by_email.get(invite.email)))
+
+    return members
+
+
+async def save_team_invite(
+    db: AsyncSession | None,
+    current_user: User | dict[str, Any],
+    email: str,
+    role: str,
+) -> list[dict[str, object]]:
+    owner_id = str(_value(current_user, "id"))
+    now = datetime.now(timezone.utc)
+
+    if db is None:
+        owner_invites = _memory_team_invites_by_owner.setdefault(owner_id, {})
+        invite = owner_invites.get(email)
+        if invite is None:
+            invite = {
+                "id": str(uuid.uuid4()),
+                "workspace_owner_user_id": owner_id,
+                "email": email,
+                "name": _name_from_email(email),
+                "role": role,
+                "status": "Invited",
+                "created_at": now,
+                "updated_at": now,
+            }
+            owner_invites[email] = invite
+        else:
+            invite["role"] = role
+            invite["name"] = _name_from_email(email)
+            invite["status"] = "Invited"
+            invite["updated_at"] = now
+        return await get_team_members(db, current_user)
+
+    result = await db.execute(
+        select(TeamMemberInvite).where(
+            TeamMemberInvite.workspace_owner_user_id == owner_id,
+            TeamMemberInvite.email == email,
+        )
+    )
+    invite = result.scalar_one_or_none()
+    if invite is None:
+        invite = TeamMemberInvite(
+            id=str(uuid.uuid4()),
+            workspace_owner_user_id=owner_id,
+            email=email,
+            name=_name_from_email(email),
+            role=role,
+            status="Invited",
+        )
+        db.add(invite)
+    else:
+        invite.name = _name_from_email(email)
+        invite.role = role
+        invite.status = "Invited"
+        invite.updated_at = now
+
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        result = await db.execute(
+            select(TeamMemberInvite).where(
+                TeamMemberInvite.workspace_owner_user_id == owner_id,
+                TeamMemberInvite.email == email,
+            )
+        )
+        invite = result.scalar_one()
+        invite.name = _name_from_email(email)
+        invite.role = role
+        invite.status = "Invited"
+        invite.updated_at = now
+        await db.commit()
+
+    return await get_team_members(db, current_user)
 
 
 def _session_activity_date(session: DebateSession | dict[str, Any]):

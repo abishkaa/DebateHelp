@@ -1,11 +1,17 @@
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_optional_db
-from models.product import DashboardResponse, SessionHistoryResponse
+from models.product import CreateTeamInviteRequest, DashboardResponse, SessionHistoryResponse, TeamMembersResponse
 from services.auth_service import AUTH_COOKIE_NAME, auth_error, get_user_from_token
-from services.product_service import build_dashboard, get_user_sessions, serialize_session
+from services.product_service import (
+    build_dashboard,
+    get_team_members,
+    get_user_sessions,
+    save_team_invite,
+    serialize_session,
+)
 
 
 def session_score(session) -> int:
@@ -48,3 +54,28 @@ async def sessions(
         previous = session_score(user_sessions[index + 1]) if index + 1 < len(user_sessions) else None
         serialized.append(serialize_session(session, previous))
     return {"sessions": serialized}
+
+
+@router.get("/team", response_model=TeamMembersResponse)
+async def team_members(
+    current_user=Depends(get_product_user),
+    db: AsyncSession | None = Depends(get_optional_db),
+):
+    return {"members": await get_team_members(db, current_user)}
+
+
+@router.post("/team/invites", response_model=TeamMembersResponse)
+async def invite_team_member(
+    request: CreateTeamInviteRequest,
+    current_user=Depends(get_product_user),
+    db: AsyncSession | None = Depends(get_optional_db),
+):
+    current_email = current_user["email"] if isinstance(current_user, dict) else current_user.email
+    if request.email == current_email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You are already a member of this workspace.",
+        )
+
+    members = await save_team_invite(db, current_user, request.email, request.role)
+    return {"members": members}

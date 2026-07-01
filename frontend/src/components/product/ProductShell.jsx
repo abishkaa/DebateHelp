@@ -172,7 +172,7 @@ function ProductShell({
             <span className="product-avatar">{getInitials(currentUser?.full_name)}</span>
           )}
           <span>
-            <strong>{currentUser?.full_name || 'Abish Abdikalikov'}</strong>
+            <strong>{currentUser?.full_name || currentUser?.email || 'DebateHelp User'}</strong>
             <small>{currentUser?.role || 'Debater'}</small>
           </span>
           <ShieldCheck size={16} />

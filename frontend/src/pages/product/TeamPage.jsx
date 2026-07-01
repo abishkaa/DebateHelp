@@ -11,28 +11,32 @@ import {
   Users,
   X,
 } from 'lucide-react'
+import { productApi } from '../../services/productApi.js'
 import { PanelHeading, PageHeading } from './OverviewPage.jsx'
 
-function TeamPage({ currentUser }) {
+function TeamPage({ currentUser, token }) {
   const [activityIndex, setActivityIndex] = useState(0)
   const [members, setMembers] = useState(() => (currentUser ? [buildCurrentMember(currentUser)] : []))
+  const [syncingMembers, setSyncingMembers] = useState(Boolean(token))
   const [sharedArgumentItems, setSharedArgumentItems] = useState([])
   const [selectedArgument, setSelectedArgument] = useState(null)
   const [inviteOpen, setInviteOpen] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteRole, setInviteRole] = useState('Debater')
+  const [inviteSaving, setInviteSaving] = useState(false)
   const [inviteMessage, setInviteMessage] = useState('')
   const [editorOpen, setEditorOpen] = useState(false)
   const [editorContent, setEditorContent] = useState(() => buildArgumentDraft(null))
   const [editorMessage, setEditorMessage] = useState('')
   const currentUserName = currentUser?.full_name || currentUser?.email || 'You'
+  const invitedCount = members.filter((member) => member.status === 'Invited').length
   const activityMessages = [
-    `${currentUserName} is active in the workspace`,
+    syncingMembers ? 'Syncing real team members...' : `${currentUserName} is active in the workspace`,
     sharedArgumentItems.length
       ? `${sharedArgumentItems.length} shared draft${sharedArgumentItems.length === 1 ? '' : 's'} saved locally`
       : 'No shared arguments yet',
-    members.length > 1
-      ? `${members.length - 1} invited member${members.length - 1 === 1 ? '' : 's'} pending`
+    invitedCount
+      ? `${invitedCount} invited member${invitedCount === 1 ? '' : 's'} pending`
       : 'Invite members when you are ready',
   ]
 
@@ -48,9 +52,34 @@ function TeamPage({ currentUser }) {
     const currentMember = buildCurrentMember(currentUser)
     setMembers((current) => [
       currentMember,
-      ...current.filter((member) => !member.isCurrent && member.email !== currentMember.email),
+      ...current.filter((member) => !member.is_current && member.email !== currentMember.email),
     ])
   }, [currentUser])
+
+  useEffect(() => {
+    let active = true
+    if (!token) {
+      setSyncingMembers(false)
+      return undefined
+    }
+
+    setSyncingMembers(true)
+    productApi.team()
+      .then((data) => {
+        if (!active) return
+        setMembers(data.members || [])
+      })
+      .catch((error) => {
+        if (active) setInviteMessage(error.message || 'Unable to load real team members.')
+      })
+      .finally(() => {
+        if (active) setSyncingMembers(false)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [token])
 
   useEffect(() => {
     setEditorContent(buildArgumentDraft(selectedArgument))
@@ -68,31 +97,30 @@ function TeamPage({ currentUser }) {
     setInviteEmail('')
   }
 
-  const createInvite = (event) => {
+  const createInvite = async (event) => {
     event.preventDefault()
     const email = inviteEmail.trim().toLowerCase()
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setInviteMessage('Enter a valid email address first.')
       return
     }
+    if (currentUser?.email && email === currentUser.email.toLowerCase()) {
+      setInviteMessage('You are already a member of this workspace.')
+      return
+    }
 
-    const name = nameFromEmail(email)
-    setMembers((current) => {
-      if (current.some((member) => member.email === email)) return current
-      return [
-        {
-          email,
-          initials: getInitials(name),
-          name,
-          role: inviteRole,
-          status: 'Invited',
-          tone: 'amber',
-        },
-        ...current,
-      ]
-    })
-    setInviteMessage(`Invite created for ${email}. They now appear as pending in the member list.`)
-    setInviteEmail('')
+    setInviteSaving(true)
+    setInviteMessage('')
+    try {
+      const data = await productApi.inviteTeamMember({ email, role: inviteRole })
+      setMembers(data.members || [])
+      setInviteMessage(`Invite saved for ${email}. It is now part of your real team data.`)
+      setInviteEmail('')
+    } catch (error) {
+      setInviteMessage(error.message || 'Unable to save this invite.')
+    } finally {
+      setInviteSaving(false)
+    }
   }
 
   const copyInviteLink = async () => {
@@ -149,7 +177,7 @@ function TeamPage({ currentUser }) {
 
       <section className="team-workspace-grid">
         <article className="product-panel team-members-panel">
-          <PanelHeading title="Members" meta={`${members.length} total`} />
+          <PanelHeading title="Members" meta={syncingMembers ? 'Syncing...' : `${members.length} total`} />
           <div className="team-member-list">
             {members.map((member) => (
               <div key={member.email || member.name}>
@@ -270,9 +298,9 @@ function TeamPage({ currentUser }) {
                   <Copy size={16} />
                   Copy link
                 </button>
-                <button className="product-button primary" type="submit">
+                <button className="product-button primary" disabled={inviteSaving} type="submit">
                   <Plus size={16} />
-                  Create invite
+                  {inviteSaving ? 'Saving...' : 'Create invite'}
                 </button>
               </div>
               {inviteMessage && <p className="team-action-status">{inviteMessage}</p>}
@@ -295,21 +323,12 @@ function buildCurrentMember(currentUser) {
   return {
     email: currentUser.email || 'current-user',
     initials: getInitials(name),
-    isCurrent: true,
+    is_current: true,
     name,
     role: currentUser.role || 'Workspace owner',
     status: 'Active',
     tone: 'green',
   }
-}
-
-function nameFromEmail(email) {
-  return email
-    .split('@')[0]
-    .split(/[._-]+/)
-    .filter(Boolean)
-    .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
-    .join(' ') || 'Invited Member'
 }
 
 function getInitials(name) {

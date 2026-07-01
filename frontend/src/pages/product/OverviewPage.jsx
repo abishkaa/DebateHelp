@@ -15,6 +15,7 @@ import { productApi } from '../../services/productApi.js'
 
 function OverviewPage({ currentUser, navigateTo, onExport, token }) {
   const [dashboard, setDashboard] = useState(null)
+  const [teamMembers, setTeamMembers] = useState(() => (currentUser ? [buildCurrentTeamMember(currentUser)] : []))
   const [syncing, setSyncing] = useState(Boolean(token))
 
   useEffect(() => {
@@ -24,11 +25,22 @@ function OverviewPage({ currentUser, navigateTo, onExport, token }) {
       return undefined
     }
 
-    productApi.dashboard(token)
+    const dashboardRequest = productApi.dashboard(token)
+    const teamRequest = productApi.team(token)
+
+    dashboardRequest
       .then((data) => {
         if (active) setDashboard(data)
       })
       .catch(() => null)
+
+    teamRequest
+      .then((data) => {
+        if (active) setTeamMembers(data.members || [])
+      })
+      .catch(() => null)
+
+    Promise.allSettled([dashboardRequest, teamRequest])
       .finally(() => {
         if (active) setSyncing(false)
       })
@@ -38,6 +50,11 @@ function OverviewPage({ currentUser, navigateTo, onExport, token }) {
     }
   }, [token])
 
+  useEffect(() => {
+    if (!currentUser || token) return
+    setTeamMembers([buildCurrentTeamMember(currentUser)])
+  }, [currentUser, token])
+
   const metrics = dashboard?.metrics?.length ? dashboard.metrics : progressMetrics
   const chartValues = dashboard?.progress_series?.length ? dashboard.progress_series : []
   const milestoneData = dashboard?.achievements?.length ? dashboard.achievements : achievements
@@ -45,7 +62,8 @@ function OverviewPage({ currentUser, navigateTo, onExport, token }) {
   const hasSessions = sessionData.length > 0
   const latestSession = sessionData[0]
   const currentUserName = currentUser?.full_name || currentUser?.email || 'You'
-  const currentUserInitials = getInitials(currentUserName)
+  const teamMemberCount = teamMembers.length
+  const pendingTeamCount = teamMembers.filter((member) => member.status === 'Invited').length
 
   return (
     <div className="product-page overview-page">
@@ -198,15 +216,21 @@ function OverviewPage({ currentUser, navigateTo, onExport, token }) {
 
       <section className="overview-bottom-grid">
         <article className="product-panel team-summary">
-          <PanelHeading title="Team workspace" meta={currentUser ? '1 member active' : 'No members loaded'} />
+          <PanelHeading
+            title="Team workspace"
+            meta={syncing ? 'Syncing real team' : `${teamMemberCount} member${teamMemberCount === 1 ? '' : 's'} loaded`}
+          />
           <div className="team-summary-stats">
-            <div><Users size={18} /><strong>{currentUser ? 1 : 0}</strong><span>Members</span></div>
+            <div><Users size={18} /><strong>{teamMemberCount}</strong><span>Members</span></div>
             <div><Lightbulb size={18} /><strong>0</strong><span>Shared arguments</span></div>
-            <div><Target size={18} /><strong>No topic yet</strong><span>Current topic</span></div>
+            <div><Target size={18} /><strong>{pendingTeamCount}</strong><span>Pending invites</span></div>
           </div>
           <div className="collaboration-row">
             <div className="avatar-stack">
-              {currentUser && <span>{currentUserInitials}</span>}
+              {teamMembers.slice(0, 4).map((member) => (
+                <span key={member.email || member.id}>{member.initials}</span>
+              ))}
+              {teamMembers.length > 4 && <span>+{teamMembers.length - 4}</span>}
             </div>
             <div className="live-collaborators">
               <i />
@@ -327,4 +351,18 @@ function getInitials(name = '') {
     .map((part) => part[0])
     .join('')
     .toUpperCase() || 'U'
+}
+
+function buildCurrentTeamMember(currentUser) {
+  const name = currentUser.full_name || currentUser.email || 'Current User'
+  return {
+    email: currentUser.email,
+    id: currentUser.id || currentUser.email,
+    initials: getInitials(name),
+    name,
+    role: currentUser.role || 'Workspace owner',
+    status: 'Active',
+    tone: 'green',
+    is_current: true,
+  }
 }

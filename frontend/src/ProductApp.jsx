@@ -31,7 +31,7 @@ function ProductApp({
   if (currentPath.startsWith('/app/analyze')) page = <AnalyzePage currentPath={currentPath} onExport={handleExport} token={token} />
   if (currentPath.startsWith('/app/live')) page = <LiveDebatePage currentPath={currentPath} token={token} />
   if (currentPath.startsWith('/app/history')) page = <HistoryPage currentPath={currentPath} navigateTo={navigateTo} token={token} />
-  if (currentPath.startsWith('/app/team')) page = <TeamPage currentUser={currentUser} />
+  if (currentPath.startsWith('/app/team')) page = <TeamPage currentUser={currentUser} token={token} />
   if (currentPath.startsWith('/app/reports')) page = <ReportsPage currentPath={currentPath} onExport={handleExport} token={token} />
   if (currentPath.startsWith('/app/profile')) {
     page = <ProfilePage currentUser={currentUser} token={token} updateProfile={updateProfile} />
