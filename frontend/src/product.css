@@ -11180,3 +11180,429 @@ body,
   transform: none !important;
   box-shadow: none !important;
 }
+
+/* Smooth motion layer: soft neon movement without JS-driven layout work. */
+:root {
+  --motion-smooth: cubic-bezier(0.22, 1, 0.36, 1);
+  --motion-snap: cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes dh-page-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0) scale(0.988);
+    filter: blur(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes dh-panel-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 22px, 0) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes dh-soft-pulse {
+  0%,
+  100% {
+    opacity: 0.72;
+    transform: scale(1);
+    box-shadow: 0 0 0 rgba(168, 255, 56, 0);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.35);
+    box-shadow: 0 0 18px rgba(168, 255, 56, 0.46);
+  }
+}
+
+@keyframes dh-sheen {
+  from {
+    transform: translate3d(-130%, 0, 0) skewX(-18deg);
+  }
+  to {
+    transform: translate3d(130%, 0, 0) skewX(-18deg);
+  }
+}
+
+@keyframes dh-float {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(0, -10px, 0) rotate(1.5deg);
+  }
+}
+
+@keyframes dh-scan {
+  from {
+    transform: translate3d(0, -100%, 0);
+  }
+  to {
+    transform: translate3d(0, 100%, 0);
+  }
+}
+
+@keyframes dh-progress-flow {
+  from {
+    background-position: 0 50%;
+  }
+  to {
+    background-position: 140px 50%;
+  }
+}
+
+.product-page,
+.auth-card,
+.du-hero-window {
+  animation: dh-page-rise 560ms var(--motion-smooth) both !important;
+  will-change: transform, opacity, filter;
+}
+
+.product-panel,
+.metric-block,
+.analysis-score,
+.live-control-bar,
+.report-preview,
+.du-intel-card,
+.du-protocol-card,
+.du-dossier,
+.du-resistance {
+  animation: dh-panel-rise 620ms var(--motion-smooth) both !important;
+  will-change: transform, opacity;
+}
+
+.metric-block:nth-child(2),
+.analysis-score:nth-child(2),
+.product-panel:nth-of-type(2),
+.du-intel-card:nth-child(2) {
+  animation-delay: 70ms !important;
+}
+
+.metric-block:nth-child(3),
+.analysis-score:nth-child(3),
+.product-panel:nth-of-type(3),
+.du-intel-card:nth-child(3) {
+  animation-delay: 130ms !important;
+}
+
+.metric-block:nth-child(4),
+.analysis-score:nth-child(4),
+.product-panel:nth-of-type(4),
+.du-intel-card:nth-child(4) {
+  animation-delay: 190ms !important;
+}
+
+.product-button,
+.du-button,
+.auth-submit,
+.oauth-button,
+.product-nav button,
+.product-war-start,
+.product-account,
+.product-command-trigger,
+.product-hud-tabs button,
+.product-top-actions button,
+.product-panel-heading button,
+.panel-action,
+.quick-actions button,
+.session-list button,
+.history-table > button,
+.shared-argument-list button,
+.report-session-list button,
+.command-list button,
+.product-mobile-tabs button,
+.team-modal button,
+.auth-upload-preview button {
+  backface-visibility: hidden;
+  transform: translateZ(0);
+  transition:
+    transform 260ms var(--motion-snap),
+    box-shadow 260ms var(--motion-snap),
+    border-color 220ms ease,
+    background 220ms ease,
+    color 180ms ease,
+    opacity 180ms ease !important;
+}
+
+.product-button:hover,
+.du-button:hover,
+.auth-submit:hover,
+.oauth-button:hover,
+.product-war-start:hover,
+.product-account:hover,
+.product-command-trigger:hover,
+.product-top-actions button:hover,
+.product-panel-heading button:hover,
+.panel-action:hover,
+.quick-actions button:hover,
+.session-list button:hover,
+.history-table > button:hover,
+.shared-argument-list button:hover,
+.report-session-list button:hover,
+.command-list button:hover,
+.product-mobile-tabs button:hover,
+.team-modal button:hover,
+.auth-upload-preview button:hover {
+  transform: translate3d(0, -3px, 0) scale(1.012) !important;
+  box-shadow:
+    0 16px 38px rgba(0, 0, 0, 0.22),
+    0 0 28px rgba(0, 245, 255, 0.13) !important;
+}
+
+.product-button:active,
+.du-button:active,
+.auth-submit:active,
+.oauth-button:active,
+.product-war-start:active,
+.product-account:active,
+.product-command-trigger:active,
+.product-top-actions button:active,
+.product-panel-heading button:active,
+.panel-action:active,
+.quick-actions button:active,
+.session-list button:active,
+.history-table > button:active,
+.shared-argument-list button:active,
+.report-session-list button:active,
+.command-list button:active,
+.product-mobile-tabs button:active,
+.team-modal button:active {
+  transform: translate3d(0, -1px, 0) scale(0.985) !important;
+  transition-duration: 90ms !important;
+}
+
+.product-nav button:hover,
+.product-nav button.active {
+  transform: translate3d(4px, 0, 0) !important;
+}
+
+.product-panel,
+.metric-block,
+.analysis-score,
+.live-control-bar,
+.report-preview,
+.auth-card,
+.team-modal,
+.du-hero-window,
+.du-intel-card,
+.du-protocol-card,
+.du-dossier,
+.du-resistance {
+  transition:
+    transform 360ms var(--motion-smooth),
+    box-shadow 360ms var(--motion-smooth),
+    border-color 260ms ease,
+    background 260ms ease !important;
+}
+
+.product-panel:hover,
+.metric-block:hover,
+.analysis-score:hover,
+.live-control-bar:hover,
+.report-preview:hover,
+.auth-card:hover,
+.du-intel-card:hover,
+.du-protocol-card:hover,
+.du-dossier:hover,
+.du-resistance:hover {
+  transform: translate3d(0, -4px, 0) !important;
+  border-color: rgba(0, 245, 255, 0.48) !important;
+  box-shadow:
+    0 22px 60px rgba(0, 0, 0, 0.36),
+    0 0 42px rgba(255, 24, 218, 0.12),
+    0 0 32px rgba(0, 245, 255, 0.12) !important;
+}
+
+.product-panel,
+.metric-block,
+.analysis-score,
+.report-preview,
+.du-hero-window,
+.du-intel-card,
+.du-protocol-card,
+.du-resistance {
+  position: relative;
+  overflow: hidden;
+}
+
+.product-panel::after,
+.metric-block::after,
+.analysis-score::after,
+.report-preview::after,
+.du-hero-window::after,
+.du-intel-card::after,
+.du-protocol-card::after,
+.du-resistance::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 -35%;
+  width: 32%;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.13), transparent);
+  opacity: 0;
+  transform: translate3d(-130%, 0, 0) skewX(-18deg);
+}
+
+.product-panel:hover::after,
+.metric-block:hover::after,
+.analysis-score:hover::after,
+.report-preview:hover::after,
+.du-hero-window:hover::after,
+.du-intel-card:hover::after,
+.du-protocol-card:hover::after,
+.du-resistance:hover::after {
+  opacity: 1;
+  animation: dh-sheen 900ms var(--motion-smooth) both;
+}
+
+.product-system-status i,
+.product-live-state i,
+.collab-pulse i,
+.live-collaborators i,
+.profile-identity i,
+.live-session-state i,
+.live-editing-line i {
+  animation: dh-soft-pulse 2.4s ease-in-out infinite;
+  transform-origin: center;
+}
+
+.live-session-state.running i,
+.product-live-state i {
+  animation-duration: 1.45s;
+}
+
+.score-progress::-webkit-progress-value,
+.confidence-progress::-webkit-progress-value {
+  background-size: 140px 100% !important;
+  animation: dh-progress-flow 1.8s linear infinite;
+}
+
+.score-progress::-moz-progress-bar,
+.confidence-progress::-moz-progress-bar {
+  background-size: 140px 100% !important;
+  animation: dh-progress-flow 1.8s linear infinite;
+}
+
+.analysis-trace-list > div,
+.analysis-section,
+.citation-row,
+.live-statements > div,
+.live-signal-list > div,
+.team-member-list > div,
+.shared-argument-list button,
+.report-session-list > button,
+.history-table > button,
+.session-list button,
+.command-list button {
+  animation: dh-panel-rise 480ms var(--motion-smooth) both;
+}
+
+.analysis-trace-list > div:nth-child(2),
+.analysis-section:nth-child(2),
+.live-statements > div:nth-child(2),
+.live-signal-list > div:nth-child(2),
+.team-member-list > div:nth-child(2),
+.shared-argument-list button:nth-child(2),
+.report-session-list > button:nth-child(2),
+.history-table > button:nth-child(2),
+.session-list button:nth-child(2),
+.command-list button:nth-child(2) {
+  animation-delay: 45ms;
+}
+
+.analysis-trace-list > div:nth-child(3),
+.analysis-section:nth-child(3),
+.live-statements > div:nth-child(3),
+.live-signal-list > div:nth-child(3),
+.team-member-list > div:nth-child(3),
+.shared-argument-list button:nth-child(3),
+.report-session-list > button:nth-child(3),
+.history-table > button:nth-child(3),
+.session-list button:nth-child(3),
+.command-list button:nth-child(3) {
+  animation-delay: 90ms;
+}
+
+.analysis-trace-list > div:nth-child(n + 4),
+.analysis-section:nth-child(n + 4),
+.live-statements > div:nth-child(n + 4),
+.live-signal-list > div:nth-child(n + 4),
+.team-member-list > div:nth-child(n + 4),
+.shared-argument-list button:nth-child(n + 4),
+.report-session-list > button:nth-child(n + 4),
+.history-table > button:nth-child(n + 4),
+.session-list button:nth-child(n + 4),
+.command-list button:nth-child(n + 4) {
+  animation-delay: 135ms;
+}
+
+.du-hero-art img,
+.du-hero-art::before,
+.du-hero-art::after,
+.auth-layout-visual img,
+.profile-large-avatar,
+.product-avatar.image {
+  animation: dh-float 7s ease-in-out infinite;
+  will-change: transform;
+}
+
+.du-scanline {
+  animation: dh-scan 8s linear infinite !important;
+}
+
+.team-modal-backdrop,
+.command-overlay,
+.product-mobile-scrim {
+  animation: dh-page-rise 220ms ease-out both !important;
+}
+
+.team-modal,
+.command-palette {
+  animation: dh-panel-rise 340ms var(--motion-pop) both !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+
+  .product-panel:hover,
+  .metric-block:hover,
+  .analysis-score:hover,
+  .live-control-bar:hover,
+  .report-preview:hover,
+  .auth-card:hover,
+  .du-intel-card:hover,
+  .du-protocol-card:hover,
+  .du-dossier:hover,
+  .du-resistance:hover,
+  .product-button:hover,
+  .du-button:hover,
+  .auth-submit:hover,
+  .oauth-button:hover,
+  .panel-action:hover,
+  .quick-actions button:hover,
+  .session-list button:hover,
+  .history-table > button:hover,
+  .shared-argument-list button:hover,
+  .report-session-list button:hover {
+    transform: none !important;
+  }
+}
