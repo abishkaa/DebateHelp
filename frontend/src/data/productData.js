@@ -5,8 +5,6 @@ export const progressMetrics = [
   { label: 'Current streak', value: '0 days', change: 'No activity today', tone: 'red' },
 ]
 
-export const recentSessions = []
-
 export const achievements = [
   {
     title: 'Reasoning Scholar',
@@ -31,31 +29,6 @@ export const achievements = [
   },
 ]
 
-export const teamMembers = []
-
-export const sharedArguments = []
-
-export const citationSources = [
-  {
-    source: 'Harvard Study',
-    detail: 'Peer-reviewed policy research',
-    credibility: 96,
-    tone: 'green',
-  },
-  {
-    source: 'Wikipedia',
-    detail: 'Useful overview, verify primary references',
-    credibility: 71,
-    tone: 'amber',
-  },
-  {
-    source: 'Blog Post',
-    detail: 'Unverified author and methodology',
-    credibility: 43,
-    tone: 'red',
-  },
-]
-
 export const progressSeries = []
 
 export const famousDebates = [
@@ -72,21 +45,3 @@ export const famousDebates = [
     description: 'Practice questioning assumptions and defining terms.',
   },
 ]
-
-export const reportTemplate = {
-  topic: 'No session selected',
-  score: 0,
-  recommendation: 'Analyze a real argument to generate a personalized recommendation.',
-  keyArguments: [
-    'No real session data has been recorded yet.',
-  ],
-  evidence: [
-    'Add sources in an analysis to review evidence quality.',
-  ],
-  fallacies: [
-    'Logical risks will appear after a real analysis is saved.',
-  ],
-  counterarguments: [
-    'Counterarguments will appear after a real analysis is saved.',
-  ],
-}

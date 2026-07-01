@@ -16,6 +16,7 @@ import { productApi } from '../../services/productApi.js'
 function OverviewPage({ currentUser, navigateTo, onExport, token }) {
   const [dashboard, setDashboard] = useState(null)
   const [teamMembers, setTeamMembers] = useState(() => (currentUser ? [buildCurrentTeamMember(currentUser)] : []))
+  const [sharedArgumentCount, setSharedArgumentCount] = useState(0)
   const [syncing, setSyncing] = useState(Boolean(token))
 
   useEffect(() => {
@@ -27,6 +28,7 @@ function OverviewPage({ currentUser, navigateTo, onExport, token }) {
 
     const dashboardRequest = productApi.dashboard(token)
     const teamRequest = productApi.team(token)
+    const sharedArgumentsRequest = productApi.sharedArguments(token)
 
     dashboardRequest
       .then((data) => {
@@ -40,7 +42,13 @@ function OverviewPage({ currentUser, navigateTo, onExport, token }) {
       })
       .catch(() => null)
 
-    Promise.allSettled([dashboardRequest, teamRequest])
+    sharedArgumentsRequest
+      .then((data) => {
+        if (active) setSharedArgumentCount(data.arguments?.length || 0)
+      })
+      .catch(() => null)
+
+    Promise.allSettled([dashboardRequest, teamRequest, sharedArgumentsRequest])
       .finally(() => {
         if (active) setSyncing(false)
       })
@@ -222,7 +230,7 @@ function OverviewPage({ currentUser, navigateTo, onExport, token }) {
           />
           <div className="team-summary-stats">
             <div><Users size={18} /><strong>{teamMemberCount}</strong><span>Members</span></div>
-            <div><Lightbulb size={18} /><strong>0</strong><span>Shared arguments</span></div>
+            <div><Lightbulb size={18} /><strong>{sharedArgumentCount}</strong><span>Shared arguments</span></div>
             <div><Target size={18} /><strong>{pendingTeamCount}</strong><span>Pending invites</span></div>
           </div>
           <div className="collaboration-row">
@@ -250,8 +258,8 @@ function OverviewPage({ currentUser, navigateTo, onExport, token }) {
           <button type="button" onClick={() => navigateTo('/app/live')}>
             <Circle size={18} /><span><strong>Start live debate</strong><small>Real-time debate with coaching</small></span><ArrowRight size={16} />
           </button>
-          <button type="button" onClick={() => onExport()}>
-            <FileDown size={18} /><span><strong>Export professional report</strong><small>Generate a consulting-grade PDF</small></span><ArrowRight size={16} />
+          <button type="button" onClick={() => navigateTo('/app/reports')}>
+            <FileDown size={18} /><span><strong>Export professional report</strong><small>Choose a real saved session first</small></span><ArrowRight size={16} />
           </button>
         </article>
       </section>

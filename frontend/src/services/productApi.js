@@ -15,6 +15,9 @@ async function request(path, options = {}) {
 }
 
 export const productApi = {
+  health() {
+    return request('/health/backend')
+  },
   dashboard() {
     return request('/product/dashboard')
   },
@@ -29,5 +32,17 @@ export const productApi = {
       method: 'POST',
       body: invite,
     })
+  },
+  sharedArguments() {
+    return request('/product/shared-arguments')
+  },
+  saveSharedArgument(argument) {
+    return request('/product/shared-arguments', {
+      method: 'POST',
+      body: argument,
+    })
+  },
+  report(sessionId) {
+    return request(`/product/reports/${encodeURIComponent(sessionId)}`)
   },
 }

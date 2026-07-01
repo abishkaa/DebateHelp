@@ -20,7 +20,10 @@ function Signup({ navigateTo }) {
   const { oauthLogin, signup } = useAuth()
   const query = useMemo(() => new URLSearchParams(window.location.search), [])
   const nameRef = useRef(null)
-  const [form, setForm] = useState(INITIAL_FORM)
+  const [form, setForm] = useState(() => ({
+    ...INITIAL_FORM,
+    email: query.get('email') || '',
+  }))
   const [errors, setErrors] = useState(() => {
     const oauthError = query.get('oauth_error')
     return oauthError ? { form: oauthError } : {}

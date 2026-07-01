@@ -27,13 +27,14 @@ function TeamPage({ currentUser, token }) {
   const [inviteMessage, setInviteMessage] = useState('')
   const [editorOpen, setEditorOpen] = useState(false)
   const [editorContent, setEditorContent] = useState(() => buildArgumentDraft(null))
+  const [draftSaving, setDraftSaving] = useState(false)
   const [editorMessage, setEditorMessage] = useState('')
   const currentUserName = currentUser?.full_name || currentUser?.email || 'You'
   const invitedCount = members.filter((member) => member.status === 'Invited').length
   const activityMessages = [
     syncingMembers ? 'Syncing real team members...' : `${currentUserName} is active in the workspace`,
     sharedArgumentItems.length
-      ? `${sharedArgumentItems.length} shared draft${sharedArgumentItems.length === 1 ? '' : 's'} saved locally`
+      ? `${sharedArgumentItems.length} shared draft${sharedArgumentItems.length === 1 ? '' : 's'} saved to workspace`
       : 'No shared arguments yet',
     invitedCount
       ? `${invitedCount} invited member${invitedCount === 1 ? '' : 's'} pending`
@@ -82,9 +83,36 @@ function TeamPage({ currentUser, token }) {
   }, [token])
 
   useEffect(() => {
+    let active = true
+    if (!token) return undefined
+
+    productApi.sharedArguments()
+      .then((data) => {
+        if (!active) return
+        setSharedArgumentItems(data.arguments || [])
+        setSelectedArgument((current) => current || data.arguments?.[0] || null)
+      })
+      .catch((error) => {
+        if (active) setEditorMessage(error.message || 'Unable to load shared arguments.')
+      })
+
+    return () => {
+      active = false
+    }
+  }, [token])
+
+  useEffect(() => {
     setEditorContent(buildArgumentDraft(selectedArgument))
-    setEditorMessage('')
   }, [selectedArgument])
+
+  useEffect(() => {
+    if (!inviteOpen) return undefined
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') closeInvite()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [inviteOpen])
 
   const openInvite = () => {
     setInviteOpen(true)
@@ -124,16 +152,24 @@ function TeamPage({ currentUser, token }) {
   }
 
   const copyInviteLink = async () => {
-    const inviteUrl = `${window.location.origin}/signup?workspace=debate-room`
+    const email = inviteEmail.trim().toLowerCase()
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setInviteMessage('Enter a valid email before copying an invite link.')
+      return
+    }
+
+    const inviteUrl = email
+      ? `${window.location.origin}/signup?email=${encodeURIComponent(email)}`
+      : `${window.location.origin}/signup`
     try {
       await navigator.clipboard.writeText(inviteUrl)
-      setInviteMessage('Workspace invite link copied.')
+      setInviteMessage(email ? `Signup link copied for ${email}. Create the invite to track them in this workspace.` : 'Signup link copied.')
     } catch {
       setInviteMessage(inviteUrl)
     }
   }
 
-  const saveEditorDraft = () => {
+  const saveEditorDraft = async () => {
     const trimmed = editorContent.trim()
     if (!trimmed) {
       setEditorMessage('Write a draft before saving.')
@@ -142,22 +178,24 @@ function TeamPage({ currentUser, token }) {
 
     const [firstLine] = trimmed.split('\n')
     const draft = {
+      id: selectedArgument?.id,
       title: firstLine.trim() || 'Untitled shared argument',
-      owner: currentUserName.split(/\s+/)[0] || 'You',
-      quality: 0,
-      citations: 0,
-      status: 'Draft',
       body: trimmed,
     }
 
-    setSharedArgumentItems((current) => {
-      const withoutCurrent = selectedArgument
-        ? current.filter((argument) => argument.title !== selectedArgument.title)
-        : current
-      return [draft, ...withoutCurrent]
-    })
-    setSelectedArgument(draft)
-    setEditorMessage('Collaborative draft saved locally.')
+    setDraftSaving(true)
+    setEditorMessage('')
+    try {
+      const data = await productApi.saveSharedArgument(draft)
+      const savedArguments = data.arguments || []
+      setSharedArgumentItems(savedArguments)
+      setSelectedArgument(savedArguments.find((argument) => argument.title === draft.title) || savedArguments[0] || null)
+      setEditorMessage('Collaborative draft saved to your workspace.')
+    } catch (error) {
+      setEditorMessage(error.message || 'Unable to save shared draft.')
+    } finally {
+      setDraftSaving(false)
+    }
   }
 
   return (
@@ -202,11 +240,11 @@ function TeamPage({ currentUser, token }) {
                 >
                   <span>
                     <strong>{argument.title}</strong>
-                    <small>{argument.owner} - {argument.citations} citations</small>
-                  </span>
-                  <b>{argument.quality}%</b>
-                  <em>{argument.status}</em>
-                </button>
+                  <small>{argument.owner} - {argument.citations} citation signals - {argument.updated_at}</small>
+                </span>
+                <b>{argument.citations}</b>
+                <em>{argument.status}</em>
+              </button>
               ))
             ) : (
               <div className="panel-empty-state compact">
@@ -221,7 +259,7 @@ function TeamPage({ currentUser, token }) {
         </article>
 
         <article className="product-panel team-review-panel">
-          <PanelHeading title="Argument review" meta={selectedArgument ? 'Local draft' : 'No draft selected'} />
+          <PanelHeading title="Argument review" meta={selectedArgument ? 'Workspace draft' : 'No draft selected'} />
           <div className="live-editing-line"><i /> {selectedArgument ? 'Draft ready for review.' : 'No teammate activity yet.'}</div>
           <h3>{selectedArgument?.title || 'No shared argument yet'}</h3>
           <p>{selectedArgument?.body || 'Open the collaborative editor to create the first shared argument for this workspace.'}</p>
@@ -244,9 +282,9 @@ function TeamPage({ currentUser, token }) {
                   <X size={16} />
                   Close
                 </button>
-                <button className="product-button primary" type="button" onClick={saveEditorDraft}>
+                <button className="product-button primary" disabled={draftSaving} type="button" onClick={saveEditorDraft}>
                   <Save size={16} />
-                  Save draft
+                  {draftSaving ? 'Saving...' : 'Save draft'}
                 </button>
               </div>
               {editorMessage && <p className="team-action-status">{editorMessage}</p>}

@@ -88,10 +88,7 @@ async def _deliver_link(
 
 
 async def send_verification_email(user_email: str, token: str) -> None:
-    """Development-friendly email placeholder.
-
-    Wire SendGrid, Resend, SMTP, or Gmail SMTP here later without changing auth routes.
-    """
+    """Send a verification link through the configured auth email delivery mode."""
     query = urlencode({"token": token, "email": user_email})
     verification_url = f"{FRONTEND_URL}/verify-email?{query}"
     await _deliver_link(
@@ -103,7 +100,7 @@ async def send_verification_email(user_email: str, token: str) -> None:
 
 
 async def send_password_reset_email(user_email: str, token: str) -> None:
-    """Development-friendly password reset placeholder."""
+    """Send a password reset link through the configured auth email delivery mode."""
     query = urlencode({"reset_token": token, "email": user_email})
     reset_url = f"{FRONTEND_URL}/forgot-password?{query}"
     await _deliver_link(

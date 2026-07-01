@@ -13,44 +13,22 @@ import {
 import { PanelHeading, PageHeading } from './OverviewPage.jsx'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.PROD ? '' : 'http://localhost:8001')
-const SCRIPT = [
-  {
-    speaker: 'Speaker A',
-    text: 'AI regulation should require independent safety audits before high-risk systems are deployed.',
-    score: 84,
-    flag: 'Strong claim with a clear policy mechanism.',
-  },
-  {
-    speaker: 'Speaker B',
-    text: 'Mandatory audits could slow innovation and create barriers that only large companies can afford.',
-    score: 79,
-    flag: 'Relevant tradeoff. Needs evidence on compliance cost.',
-  },
-  {
-    speaker: 'Speaker A',
-    text: 'A tiered model can exempt low-risk systems while preserving accountability for consequential uses.',
-    score: 88,
-    flag: 'Effective rebuttal that narrows the proposal.',
-  },
-]
-
 function LiveDebatePage({ currentPath = '', token }) {
   const [running, setRunning] = useState(false)
   const [elapsed, setElapsed] = useState(0)
-  const [visibleCount, setVisibleCount] = useState(1)
   const [speaker, setSpeaker] = useState('Speaker A')
   const [draft, setDraft] = useState('')
   const [customEntries, setCustomEntries] = useState([])
   const [liveAnalysis, setLiveAnalysis] = useState('')
   const [analyzing, setAnalyzing] = useState(false)
   const intervalRef = useRef(null)
+  const sessionIdRef = useRef(createSessionId('live'))
   const coachNoteRef = useRef(null)
 
   useEffect(() => {
     if (!running) return undefined
     intervalRef.current = window.setInterval(() => {
       setElapsed((current) => current + 1)
-      setVisibleCount((current) => Math.min(SCRIPT.length, current + 1))
     }, 2200)
     return () => window.clearInterval(intervalRef.current)
   }, [running])
@@ -64,9 +42,10 @@ function LiveDebatePage({ currentPath = '', token }) {
   }, [currentPath])
 
   const transcript = useMemo(
-    () => [...SCRIPT.slice(0, visibleCount), ...customEntries],
-    [customEntries, visibleCount],
+    () => customEntries,
+    [customEntries],
   )
+  const speakerScores = useMemo(() => computeSpeakerScores(customEntries), [customEntries])
   const addStatement = async () => {
     const statement = draft.trim()
     if (!statement || analyzing) return
@@ -80,11 +59,7 @@ function LiveDebatePage({ currentPath = '', token }) {
     setAnalyzing(true)
 
     try {
-      let sessionId = localStorage.getItem('debate_live_session_id')
-      if (!sessionId) {
-        sessionId = crypto.randomUUID ? crypto.randomUUID() : `live-${Date.now()}`
-        localStorage.setItem('debate_live_session_id', sessionId)
-      }
+      const sessionId = sessionIdRef.current
       const response = await fetch(`${API_BASE_URL}/chat`, {
         method: 'POST',
         headers: {
@@ -92,7 +67,7 @@ function LiveDebatePage({ currentPath = '', token }) {
         },
         credentials: 'include',
         body: JSON.stringify({
-          message: `AI Regulation live debate. ${currentSpeaker}: ${statement}`,
+          message: `Live debate. ${currentSpeaker}: ${statement}`,
           session_id: sessionId,
           difficulty: 'hard',
         }),
@@ -103,7 +78,7 @@ function LiveDebatePage({ currentPath = '', token }) {
       }
       setLiveAnalysis(data.reply || '')
       setCustomEntries((current) => current.map((entry) => (
-        entry.id === entryId ? { ...entry, status: 'Analyzed' } : entry
+        entry.id === entryId ? { ...entry, score: estimateStatementScore(statement, data.reply || ''), status: 'Analyzed' } : entry
       )))
       setSpeaker((current) => current === 'Speaker A' ? 'Speaker B' : 'Speaker A')
     } catch (error) {
@@ -118,11 +93,11 @@ function LiveDebatePage({ currentPath = '', token }) {
   const reset = () => {
     setRunning(false)
     setElapsed(0)
-    setVisibleCount(1)
     setDraft('')
     setCustomEntries([])
     setLiveAnalysis('')
     setSpeaker('Speaker A')
+    sessionIdRef.current = createSessionId('live')
   }
 
   return (
@@ -149,13 +124,18 @@ function LiveDebatePage({ currentPath = '', token }) {
         <article className="product-panel live-transcript">
           <PanelHeading title="Live transcript" meta={`${transcript.length} statements`} />
           <div className="live-statements">
-            {transcript.map((entry, index) => (
-              <div key={entry.id || `${entry.speaker}-${index}`}>
-                <span className={entry.speaker === 'Speaker A' ? 'speaker-a' : 'speaker-b'}>{entry.speaker}</span>
-                <p>{entry.text}</p>
-                <small>{entry.status || (index === transcript.length - 1 && running ? 'Analyzing now...' : 'Analyzed')}</small>
-              </div>
-            ))}
+            {transcript.length ? transcript.map((entry) => (
+                <div key={entry.id}>
+                  <span className={entry.speaker === 'Speaker A' ? 'speaker-a' : 'speaker-b'}>{entry.speaker}</span>
+                  <p>{entry.text}</p>
+                  <small>{entry.score ? `${entry.status} - ${entry.score}%` : entry.status}</small>
+                </div>
+              )) : (
+                <div className="panel-empty-state compact">
+                  <strong>No live statements yet.</strong>
+                  <p>Start the timer and add a statement to create a real analyzed transcript.</p>
+                </div>
+              )}
           </div>
           <div className="live-entry">
             <label htmlFor="live-statement">{speaker} statement</label>
@@ -175,36 +155,46 @@ function LiveDebatePage({ currentPath = '', token }) {
 
         <div className="live-analysis-stack">
           <article className="product-panel">
-            <PanelHeading title="Real-time analysis" meta="Speaker A leading" />
+            <PanelHeading title="Real-time analysis" meta={customEntries.length ? 'From analyzed statements' : 'Waiting for statements'} />
             <div className="speaker-score-row">
-              <span>Speaker A<strong>88%</strong></span>
-              <progress aria-label="Speaker A score" className="score-progress" max="100" value="88" />
+              <span>Speaker A<strong>{speakerScores['Speaker A'] || 0}%</strong></span>
+              <progress aria-label="Speaker A score" className="score-progress" max="100" value={speakerScores['Speaker A'] || 0} />
             </div>
             <div className="speaker-score-row beta">
-              <span>Speaker B<strong>79%</strong></span>
-              <progress aria-label="Speaker B score" className="score-progress" max="100" value="79" />
+              <span>Speaker B<strong>{speakerScores['Speaker B'] || 0}%</strong></span>
+              <progress aria-label="Speaker B score" className="score-progress" max="100" value={speakerScores['Speaker B'] || 0} />
             </div>
-            <div className="live-signal-list">
-              <div><CheckCircle2 size={17} /><span><strong>Strong rebuttal</strong><small>Speaker A narrowed the policy effectively.</small></span></div>
-              <div><AlertTriangle size={17} /><span><strong>Evidence gap</strong><small>Neither speaker has quantified audit cost.</small></span></div>
-              <div><CircleStop size={17} /><span><strong>Weak assumption</strong><small>Innovation impact is asserted, not demonstrated.</small></span></div>
-            </div>
+            {customEntries.length ? (
+              <div className="live-signal-list">
+                {buildLiveSignals(customEntries).map((signal) => (
+                  <div key={signal.title}>
+                    {signal.tone === 'green' ? <CheckCircle2 size={17} /> : signal.tone === 'amber' ? <AlertTriangle size={17} /> : <CircleStop size={17} />}
+                    <span><strong>{signal.title}</strong><small>{signal.detail}</small></span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="panel-empty-state compact">
+                <strong>No score data yet.</strong>
+                <p>Speaker scores are calculated from real analyzed statements only.</p>
+              </div>
+            )}
           </article>
 
           <article className="product-panel live-counter">
             <PanelHeading title="Suggested counterargument" />
             <Sparkles size={20} />
             <div className="live-generated-analysis">
-              {(liveAnalysis || 'A tiered audit framework can protect innovation by applying the strongest requirements only to systems with meaningful public risk.')
+              {(liveAnalysis || 'Add a statement to generate a real counterargument from DebateHelp.')
                 .split('\n\n')
                 .map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
             </div>
-            <small>{liveAnalysis ? 'Generated from the latest statement' : 'Confidence 86% - based on the current exchange'}</small>
+            <small>{liveAnalysis ? 'Generated from the latest statement' : 'Waiting for real debate input'}</small>
           </article>
 
           <article className="product-panel live-coach-note" data-product-focus="coach" ref={coachNoteRef}>
             <PanelHeading title="Coach note" />
-            <p>Ask Speaker B to define which compliance costs are uniquely caused by audits and provide a comparison against existing product certification regimes.</p>
+            <p>{liveAnalysis ? summarizeLiveAnalysis(liveAnalysis) : 'Coach notes appear after DebateHelp analyzes a live statement.'}</p>
           </article>
         </div>
       </section>
@@ -216,6 +206,60 @@ function formatTime(seconds) {
   const minutes = Math.floor(seconds / 60)
   const remainder = seconds % 60
   return `${String(minutes).padStart(2, '0')}:${String(remainder).padStart(2, '0')}`
+}
+
+function createSessionId(prefix) {
+  if (globalThis.crypto?.randomUUID) return `${prefix}-${globalThis.crypto.randomUUID()}`
+  return `${prefix}-${Date.now()}`
+}
+
+function estimateStatementScore(statement, reply) {
+  const text = `${statement} ${reply}`.toLowerCase()
+  let score = 58 + Math.min(16, Math.floor(statement.length / 28))
+  if (/because|therefore|leads to|results in/.test(text)) score += 7
+  if (/study|report|data|research|source|\d/.test(text)) score += 6
+  if (/however|counter|opposing|tradeoff/.test(text)) score += 5
+  return Math.max(35, Math.min(95, score))
+}
+
+function computeSpeakerScores(entries) {
+  return entries.reduce((scores, entry) => {
+    if (!entry.score) return scores
+    const current = scores[entry.speaker]
+    scores[entry.speaker] = current ? Math.round((current + entry.score) / 2) : entry.score
+    return scores
+  }, {})
+}
+
+function buildLiveSignals(entries) {
+  const latest = entries.at(-1)
+  if (!latest) return []
+  const text = latest.text.toLowerCase()
+  return [
+    {
+      title: 'Latest statement analyzed',
+      detail: `${latest.speaker} scored ${latest.score || 0}% on the newest saved statement.`,
+      tone: 'green',
+    },
+    {
+      title: /study|report|data|research|source|\d/.test(text) ? 'Evidence signal present' : 'Evidence gap',
+      detail: /study|report|data|research|source|\d/.test(text)
+        ? 'The statement includes a source, statistic, or evidence signal.'
+        : 'The statement has no visible source, statistic, or evidence signal.',
+      tone: /study|report|data|research|source|\d/.test(text) ? 'green' : 'amber',
+    },
+    {
+      title: /however|counter|opposing|tradeoff/.test(text) ? 'Clash addressed' : 'Add clash',
+      detail: /however|counter|opposing|tradeoff/.test(text)
+        ? 'The statement engages a tradeoff or opposing view.'
+        : 'A stronger live response should address the opponent directly.',
+      tone: /however|counter|opposing|tradeoff/.test(text) ? 'green' : 'red',
+    },
+  ]
+}
+
+function summarizeLiveAnalysis(reply) {
+  return reply.split(/\n{2,}|(?<=[.!?])\s+/).find(Boolean) || reply
 }
 
 export default LiveDebatePage

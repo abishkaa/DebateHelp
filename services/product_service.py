@@ -7,11 +7,12 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from models.product import DebateSession, TeamMemberInvite
+from models.product import DebateSession, SharedArgument, TeamMemberInvite
 from models.user import User
 
 _memory_sessions_by_user: dict[str, dict[str, dict[str, Any]]] = {}
 _memory_team_invites_by_owner: dict[str, dict[str, dict[str, Any]]] = {}
+_memory_shared_arguments_by_user: dict[str, dict[str, dict[str, Any]]] = {}
 
 
 def _value(item: Any, key: str):
@@ -169,6 +170,32 @@ def _bounded_progress(current: int, target: int) -> int:
     if target <= 0:
         return 0
     return min(100, round(current / target * 100))
+
+
+def _short_excerpt(text: str, limit: int = 180) -> str:
+    compact = re.sub(r"\s+", " ", text).strip()
+    if len(compact) <= limit:
+        return compact
+    return f"{compact[:limit].rstrip()}..."
+
+
+def _sentences(text: str, limit: int = 3) -> list[str]:
+    parts = [
+        part.strip()
+        for part in re.split(r"(?<=[.!?])\s+", text)
+        if part.strip()
+    ]
+    return parts[:limit]
+
+
+def _citation_count(text: str) -> int:
+    patterns = [
+        r"https?://",
+        r"\b(?:study|report|research|journal|source|survey|dataset|according to)\b",
+        r"\b\d{4}\b",
+        r"\b\d+(?:\.\d+)?%",
+    ]
+    return sum(len(re.findall(pattern, text, flags=re.IGNORECASE)) for pattern in patterns)
 
 
 def _name_from_email(email: str) -> str:
@@ -344,6 +371,190 @@ async def save_team_invite(
         await db.commit()
 
     return await get_team_members(db, current_user)
+
+
+def _serialize_shared_argument(argument: SharedArgument | dict[str, Any]) -> dict[str, object]:
+    updated_at = _value(argument, "updated_at")
+    if isinstance(updated_at, datetime):
+        updated = updated_at.strftime("%b %d, %Y - %I:%M %p")
+    else:
+        updated = str(updated_at)
+    body = str(_value(argument, "body"))
+    return {
+        "id": str(_value(argument, "id")),
+        "title": str(_value(argument, "title")),
+        "body": body,
+        "owner": str(_value(argument, "owner")),
+        "citations": _citation_count(body),
+        "status": str(_optional_value(argument, "status", "Draft") or "Draft"),
+        "updated_at": updated,
+    }
+
+
+async def get_shared_arguments(
+    db: AsyncSession | None,
+    user_id: str,
+) -> list[dict[str, object]]:
+    if db is None:
+        arguments = list(_memory_shared_arguments_by_user.get(user_id, {}).values())
+        return [
+            _serialize_shared_argument(argument)
+            for argument in sorted(
+                arguments,
+                key=lambda item: _value(item, "updated_at"),
+                reverse=True,
+            )
+        ]
+
+    result = await db.execute(
+        select(SharedArgument)
+        .where(SharedArgument.user_id == user_id)
+        .order_by(SharedArgument.updated_at.desc())
+    )
+    return [_serialize_shared_argument(argument) for argument in result.scalars().all()]
+
+
+async def save_shared_argument(
+    db: AsyncSession | None,
+    current_user: User | dict[str, Any],
+    title: str,
+    body: str,
+    argument_id: str | None = None,
+) -> list[dict[str, object]]:
+    user_id = str(_value(current_user, "id"))
+    owner = str(_value(current_user, "full_name") or _value(current_user, "email"))
+    now = datetime.now(timezone.utc)
+    safe_id = argument_id or str(uuid.uuid4())
+
+    if db is None:
+        user_arguments = _memory_shared_arguments_by_user.setdefault(user_id, {})
+        argument = user_arguments.get(safe_id)
+        if argument is None:
+            argument = {
+                "id": safe_id,
+                "user_id": user_id,
+                "title": title,
+                "body": body,
+                "owner": owner,
+                "status": "Draft",
+                "created_at": now,
+                "updated_at": now,
+            }
+            user_arguments[safe_id] = argument
+        else:
+            argument["title"] = title
+            argument["body"] = body
+            argument["owner"] = owner
+            argument["status"] = "Draft"
+            argument["updated_at"] = now
+        return await get_shared_arguments(db, user_id)
+
+    argument = await db.get(SharedArgument, safe_id)
+    if argument is not None and argument.user_id != user_id:
+        argument = None
+    if argument is None:
+        argument = SharedArgument(
+            id=safe_id,
+            user_id=user_id,
+            title=title,
+            body=body,
+            owner=owner,
+            status="Draft",
+        )
+        db.add(argument)
+    else:
+        argument.title = title
+        argument.body = body
+        argument.owner = owner
+        argument.status = "Draft"
+        argument.updated_at = now
+
+    await db.commit()
+    return await get_shared_arguments(db, user_id)
+
+
+async def build_session_report(
+    db: AsyncSession | None,
+    user_id: str,
+    public_session_id: str,
+) -> dict[str, object]:
+    storage_session_id = f"{user_id}:{public_session_id}"
+    session: DebateSession | dict[str, Any] | None = None
+    if db is None:
+        session = _memory_sessions_by_user.get(user_id, {}).get(storage_session_id)
+    else:
+        result = await db.execute(
+            select(DebateSession).where(
+                DebateSession.id == storage_session_id,
+                DebateSession.user_id == user_id,
+            )
+        )
+        session = result.scalar_one_or_none()
+
+    if session is None:
+        raise ValueError("Session was not found.")
+
+    from services.chat import get_history
+
+    history = await get_history(db, storage_session_id, limit=40)
+    user_messages = [item["content"] for item in history if item["role"] == "user"]
+    assistant_messages = [item["content"] for item in history if item["role"] == "assistant"]
+    latest_argument = user_messages[-1] if user_messages else ""
+    latest_reply = assistant_messages[-1] if assistant_messages else ""
+    topic = str(_value(session, "topic"))
+    score = int(_value(session, "score"))
+    argument_count = int(_value(session, "argument_count"))
+
+    key_arguments = _sentences(latest_argument, limit=3) or [
+        f"{_plural(argument_count, 'saved argument entry')} exists for this session."
+    ]
+    evidence_terms = re.findall(
+        r"\b(?:study|report|research|source|data|survey|journal|according to|https?://\S+|\d{4}|\d+(?:\.\d+)?%)\b",
+        latest_argument,
+        flags=re.IGNORECASE,
+    )
+    evidence = (
+        [f"Evidence signal found in your saved argument: {_short_excerpt(term, 80)}" for term in evidence_terms[:4]]
+        if evidence_terms
+        else ["No named source, statistic, or citation was present in the latest saved argument."]
+    )
+    reply_sentences = _sentences(latest_reply, limit=4)
+    risks = [
+        sentence for sentence in reply_sentences
+        if re.search(r"\b(?:risk|weak|gap|assumption|fallac|unsupported|missing)\b", sentence, re.IGNORECASE)
+    ][:3]
+    if not risks and latest_reply:
+        risks = [f"DebateHelp response note: {_short_excerpt(latest_reply)}"]
+    if not risks:
+        risks = ["No assistant risk review is saved for this session yet."]
+
+    counters = [
+        sentence for sentence in reply_sentences
+        if re.search(r"\b(?:counter|opponent|rebut|however|against)\b", sentence, re.IGNORECASE)
+    ][:3]
+    if not counters and latest_reply:
+        counters = [f"Use the saved assistant response to prepare rebuttals: {_short_excerpt(latest_reply)}"]
+    if not counters:
+        counters = ["No saved counterargument guidance is available yet."]
+
+    recommendation = (
+        f"Use the latest saved DebateHelp response to revise this {topic} session. "
+        f"Current real score is {score}%, across {argument_count} saved argument "
+        f"{'entry' if argument_count == 1 else 'entries'}."
+    )
+    if latest_reply:
+        recommendation += f" Most recent coaching: {_short_excerpt(latest_reply, 220)}"
+
+    return {
+        "topic": topic,
+        "score": score,
+        "recommendation": recommendation,
+        "keyArguments": key_arguments,
+        "evidence": evidence,
+        "fallacies": risks,
+        "counterarguments": counters,
+        "sourceSessionId": public_session_id,
+    }
 
 
 def _session_activity_date(session: DebateSession | dict[str, Any]):

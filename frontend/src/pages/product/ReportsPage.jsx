@@ -8,7 +8,6 @@ import {
   ShieldCheck,
   Target,
 } from 'lucide-react'
-import { reportTemplate } from '../../data/productData.js'
 import { productApi } from '../../services/productApi.js'
 import { PanelHeading, PageHeading } from './OverviewPage.jsx'
 
@@ -19,6 +18,9 @@ function ReportsPage({ currentPath = '', onExport, token }) {
   }, [currentPath])
   const [sessions, setSessions] = useState([])
   const [selected, setSelected] = useState(null)
+  const [reportsById, setReportsById] = useState({})
+  const [reportError, setReportError] = useState('')
+  const [reportLoading, setReportLoading] = useState(false)
   const [syncing, setSyncing] = useState(Boolean(token))
 
   useEffect(() => {
@@ -53,7 +55,32 @@ function ReportsPage({ currentPath = '', onExport, token }) {
     )
   }, [requestedSessionId, sessions])
 
-  const report = selected ? buildRealSessionReport(selected) : reportTemplate
+  useEffect(() => {
+    let active = true
+    if (!selected?.id || reportsById[selected.id]) {
+      setReportError('')
+      return undefined
+    }
+
+    setReportLoading(true)
+    setReportError('')
+    productApi.report(selected.id)
+      .then((data) => {
+        if (active) setReportsById((current) => ({ ...current, [selected.id]: data }))
+      })
+      .catch((error) => {
+        if (active) setReportError(error.message || 'Unable to load this real report.')
+      })
+      .finally(() => {
+        if (active) setReportLoading(false)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [reportsById, selected])
+
+  const report = selected ? reportsById[selected.id] : null
 
   return (
     <div className="product-page reports-page">
@@ -61,7 +88,7 @@ function ReportsPage({ currentPath = '', onExport, token }) {
         title="Strategy dossier"
         description="Turn a debate analysis into a shareable neon-black PDF dossier."
         action={(
-          <button className="product-button primary" disabled={!selected} type="button" onClick={() => selected && onExport(report)}>
+          <button className="product-button primary" disabled={!report} type="button" onClick={() => report && onExport(report)}>
             <Download size={17} />
             Export dossier
           </button>
@@ -93,7 +120,7 @@ function ReportsPage({ currentPath = '', onExport, token }) {
           )}
         </aside>
 
-        {selected ? (
+        {selected && report ? (
           <article className="report-preview" aria-label="Debate analysis report preview">
             <header>
               <span>DebateHelp</span>
@@ -102,7 +129,7 @@ function ReportsPage({ currentPath = '', onExport, token }) {
             </header>
             <div className="report-preview-body">
               <span>Debate Analysis Report</span>
-              <h2>{selected.topic}</h2>
+              <h2>{report.topic}</h2>
               <p className="report-summary">A structured review of your saved session, based only on real activity recorded for this account.</p>
 
               <ReportSection icon={<Target size={18} />} title="Key Arguments" items={report.keyArguments} />
@@ -120,6 +147,14 @@ function ReportsPage({ currentPath = '', onExport, token }) {
               <span>1 / 1</span>
             </footer>
           </article>
+        ) : selected ? (
+          <article className="report-preview empty-report" aria-label="Report loading">
+            <div className="panel-empty-state">
+              <FileText size={28} />
+              <strong>{reportLoading ? 'Loading real report...' : 'Unable to load report.'}</strong>
+              <p>{reportError || 'DebateHelp is reading the saved session history for this dossier.'}</p>
+            </div>
+          </article>
         ) : (
           <article className="report-preview empty-report" aria-label="No report selected">
             <div className="panel-empty-state">
@@ -132,28 +167,6 @@ function ReportsPage({ currentPath = '', onExport, token }) {
       </section>
     </div>
   )
-}
-
-function buildRealSessionReport(session) {
-  const argumentCount = session.argument_count || 0
-  return {
-    topic: session.topic,
-    score: session.score,
-    recommendation: `This dossier is based on your saved session "${session.title}". Revise the argument, strengthen evidence, and run another analysis to compare the real score.`,
-    keyArguments: [
-      `${argumentCount} argument${argumentCount === 1 ? '' : 's'} recorded in this real session.`,
-      `Latest saved topic: ${session.topic}.`,
-    ],
-    evidence: [
-      'Evidence details are generated from your submitted argument; add citations in the next analysis to improve this section.',
-    ],
-    fallacies: [
-      'Logical risk review is tied to the submitted argument. Re-run analysis after revisions for an updated result.',
-    ],
-    counterarguments: [
-      'Use the coaching workflow to test rebuttals against this saved topic.',
-    ],
-  }
 }
 
 function ReportSection({ icon, title, items }) {

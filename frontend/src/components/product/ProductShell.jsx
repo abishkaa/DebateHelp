@@ -17,6 +17,7 @@ import {
   X,
   Zap,
 } from 'lucide-react'
+import { productApi } from '../../services/productApi.js'
 
 const NAV_ITEMS = [
   { label: 'Dashboard', path: '/app', icon: LayoutDashboard },
@@ -33,7 +34,7 @@ const COMMANDS = [
   { label: 'New session', detail: 'Start a fresh argument analysis', path: '/app/analyze?new=1', icon: Zap },
   { label: 'Open archives', detail: 'Review previous debates and growth', path: '/app/history', icon: History },
   { label: 'Start live debate', detail: 'Launch real-time coaching', path: '/app/live', icon: Mic2 },
-  { label: 'Export dossier', detail: 'Generate the current professional PDF', action: 'export', icon: FileText },
+  { label: 'Export dossier', detail: 'Open reports for a real saved session', action: 'export', icon: FileText },
   { label: 'Open team', detail: 'Review shared arguments', path: '/app/team', icon: Users },
 ]
 
@@ -65,6 +66,26 @@ function ProductShell({
 }) {
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [backendHealth, setBackendHealth] = useState(null)
+  const [healthStatus, setHealthStatus] = useState('checking')
+
+  useEffect(() => {
+    let active = true
+    productApi.health()
+      .then((data) => {
+        if (!active) return
+        setBackendHealth(data)
+        setHealthStatus('online')
+      })
+      .catch(() => {
+        if (!active) return
+        setBackendHealth(null)
+        setHealthStatus('offline')
+      })
+    return () => {
+      active = false
+    }
+  }, [])
 
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -152,9 +173,9 @@ function ProductShell({
 
         <div className="product-system-status">
           <p>System status</p>
-          <div><span>API</span><strong><i /> Online</strong></div>
-          <div><span>Reasoning</span><strong>Active</strong></div>
-          <div><span>Workspace</span><strong>Synced</strong></div>
+          <div><span>API</span><strong><i /> {formatHealthStatus(healthStatus)}</strong></div>
+          <div><span>Reasoning</span><strong>{formatProvider(backendHealth?.ai_provider)}</strong></div>
+          <div><span>Workspace</span><strong>{formatDatabaseStatus(backendHealth?.database)}</strong></div>
         </div>
 
         <button className="product-war-start" type="button" onClick={() => navigateTo('/app/analyze?new=1')}>
@@ -220,7 +241,7 @@ function ProductShell({
           </div>
 
           <div className="product-top-actions">
-            <span className="product-live-state"><i /> 00:42:18:08</span>
+            <span className="product-live-state"><i /> {formatWorkspaceState(backendHealth, healthStatus)}</span>
             <button type="button" title="AI coach" onClick={() => navigateTo('/app/analyze')}>
               <Sparkles size={18} />
             </button>
@@ -343,6 +364,33 @@ function getInitials(name = '') {
     .map((part) => part[0])
     .join('')
     .toUpperCase() || 'AA'
+}
+
+function formatHealthStatus(status) {
+  if (status === 'online') return 'Online'
+  if (status === 'offline') return 'Offline'
+  return 'Checking'
+}
+
+function formatProvider(provider) {
+  if (provider === 'oylan') return 'Oylan'
+  if (provider === 'deterministic_fallback') return 'Fallback'
+  return 'Checking'
+}
+
+function formatDatabaseStatus(status) {
+  if (status === 'connected') return 'Synced'
+  if (status === 'not_configured') return 'Memory'
+  if (status === 'unavailable') return 'Offline'
+  return 'Checking'
+}
+
+function formatWorkspaceState(health, status) {
+  if (status === 'offline') return 'Backend offline'
+  if (!health) return 'Checking backend'
+  if (health.database === 'connected') return 'Real database'
+  if (health.database === 'not_configured') return 'Memory mode'
+  return 'Database unavailable'
 }
 
 export default ProductShell

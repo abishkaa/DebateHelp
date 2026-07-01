@@ -1,6 +1,5 @@
 import { useCallback, useEffect } from 'react'
 import ProductShell from './components/product/ProductShell.jsx'
-import { reportTemplate } from './data/productData.js'
 import AnalyzePage from './pages/product/AnalyzePage.jsx'
 import HistoryPage from './pages/product/HistoryPage.jsx'
 import LiveDebatePage from './pages/product/LiveDebatePage.jsx'
@@ -18,10 +17,13 @@ function ProductApp({
   token,
   updateProfile,
 }) {
-  const handleExport = useCallback((customReport = reportTemplate) => {
-    const report = customReport?.nativeEvent ? reportTemplate : customReport
-    exportDebateReport(report || reportTemplate)
+  const handleExport = useCallback((customReport) => {
+    if (!customReport || customReport?.nativeEvent) return
+    exportDebateReport(customReport)
   }, [])
+  const openReportExporter = useCallback(() => {
+    navigateTo('/app/reports')
+  }, [navigateTo])
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0 })
@@ -42,7 +44,7 @@ function ProductApp({
       currentPath={currentPath}
       currentUser={currentUser}
       navigateTo={navigateTo}
-      onExport={handleExport}
+      onExport={openReportExporter}
       onLogout={onLogout}
     >
       {page}

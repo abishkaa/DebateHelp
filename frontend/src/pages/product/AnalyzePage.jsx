@@ -11,7 +11,7 @@ import {
   Sparkles,
   Target,
 } from 'lucide-react'
-import { citationSources, reportTemplate } from '../../data/productData.js'
+import { productApi } from '../../services/productApi.js'
 import { PanelHeading, PageHeading } from './OverviewPage.jsx'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.PROD ? '' : 'http://localhost:8001')
@@ -24,17 +24,38 @@ const TRACE_STEPS = [
   'Drafting coaching recommendations',
 ]
 
-const DEFAULT_ARGUMENT = 'Universal healthcare ensures that every citizen has access to essential medical services regardless of income, leading to a healthier population and a stronger society.'
-
 function AnalyzePage({ currentPath = '', onExport, token }) {
-  const [argument, setArgument] = useState(DEFAULT_ARGUMENT)
+  const [argument, setArgument] = useState('')
   const [loading, setLoading] = useState(false)
+  const [exporting, setExporting] = useState(false)
   const [traceIndex, setTraceIndex] = useState(TRACE_STEPS.length)
   const [error, setError] = useState('')
   const [reply, setReply] = useState('')
+  const [sessionId, setSessionId] = useState('')
   const [completedAt, setCompletedAt] = useState('')
   const timerRef = useRef(null)
+  const sessionIdRef = useRef(createSessionId('analysis'))
   const sourcesRef = useRef(null)
+
+  useEffect(() => {
+    const queryString = currentPath.split('?')[1] || ''
+    const params = new URLSearchParams(queryString)
+    if (params.get('new') === '1') {
+      setArgument('')
+      setReply('')
+      setSessionId('')
+      setCompletedAt('')
+      setError('')
+      setTraceIndex(TRACE_STEPS.length)
+      sessionIdRef.current = createSessionId('analysis')
+      return
+    }
+
+    const topic = params.get('topic')
+    if (topic && !argument.trim() && !reply) {
+      setArgument(`Practice topic: ${topic}\n\nWrite your argument here, then run the analysis.`)
+    }
+  }, [currentPath])
 
   useEffect(() => () => window.clearInterval(timerRef.current), [])
 
@@ -62,8 +83,7 @@ function AnalyzePage({ currentPath = '', onExport, token }) {
     }, 560)
 
     try {
-      const sessionId = localStorage.getItem('debate_session_id') || `analysis-${Date.now()}`
-      localStorage.setItem('debate_session_id', sessionId)
+      const activeSessionId = sessionIdRef.current
       const response = await fetch(`${API_BASE_URL}/chat`, {
         method: 'POST',
         headers: {
@@ -72,7 +92,7 @@ function AnalyzePage({ currentPath = '', onExport, token }) {
         credentials: 'include',
         body: JSON.stringify({
           message: submitted,
-          session_id: sessionId,
+          session_id: activeSessionId,
           difficulty: 'hard',
         }),
       })
@@ -83,7 +103,9 @@ function AnalyzePage({ currentPath = '', onExport, token }) {
       }
 
       const data = await response.json()
-      setReply(data.reply || 'The argument has a strong equity frame but needs more direct evidence and a clearer answer to implementation risk.')
+      if (!data.reply) throw new Error('Analysis service returned an empty response.')
+      setReply(data.reply)
+      setSessionId(data.session_id || activeSessionId)
       setCompletedAt(new Intl.DateTimeFormat(undefined, { timeStyle: 'medium' }).format(new Date()))
       setTraceIndex(TRACE_STEPS.length)
     } catch (requestError) {
@@ -95,6 +117,23 @@ function AnalyzePage({ currentPath = '', onExport, token }) {
   }
 
   const analysis = useMemo(() => buildAnalysis(argument, reply), [argument, reply])
+  const exportAnalysisReport = async () => {
+    if (!sessionId) {
+      setError('Run an analysis before exporting a report.')
+      return
+    }
+
+    setExporting(true)
+    setError('')
+    try {
+      const report = await productApi.report(sessionId)
+      onExport(report)
+    } catch (exportError) {
+      setError(exportError.message || 'Unable to export this real report.')
+    } finally {
+      setExporting(false)
+    }
+  }
 
   return (
     <div className="product-page analyze-page">
@@ -199,31 +238,40 @@ function AnalyzePage({ currentPath = '', onExport, token }) {
 
         <div className="analysis-side-stack">
           <article className="product-panel citation-panel" data-product-focus="sources" ref={sourcesRef}>
-            <PanelHeading title="Citation verification" meta="3 sources assessed" />
-            {citationSources.map((source) => (
-              <div className="citation-row" key={source.source}>
-                <span className={`citation-status ${source.tone}`}><CheckCircle2 size={17} /></span>
-                <span><strong>{source.source}</strong><small>{source.detail}</small></span>
-                <b className={source.tone}>{source.credibility}%</b>
-              </div>
-            ))}
+            <PanelHeading title="Citation verification" meta={`${analysis.sources.length} real signals`} />
+            {analysis.sources.length ? analysis.sources.map((source) => (
+                <div className="citation-row" key={source.source}>
+                  <span className={`citation-status ${source.tone}`}><CheckCircle2 size={17} /></span>
+                  <span><strong>{source.source}</strong><small>{source.detail}</small></span>
+                  <b className={source.tone}>{source.credibility}%</b>
+                </div>
+              )) : (
+                <div className="panel-empty-state compact">
+                  <strong>No citation signals found yet.</strong>
+                  <p>Add a source, statistic, study, URL, or year to your argument and run analysis.</p>
+                </div>
+              )}
           </article>
 
           <article className="product-panel coaching-detail">
             <PanelHeading title="AI debate coach" />
-            <div className="coach-callout">
-              <CheckCircle2 size={18} />
-              <strong>Your claim is strong.</strong>
-            </div>
-            <p>However:</p>
-            <ul>
-              <li>Missing statistics</li>
-              <li>Weak causal evidence</li>
-              <li>No opposing viewpoint addressed</li>
-            </ul>
-            <button className="product-button primary" type="button" onClick={() => onExport({ ...reportTemplate, topic: inferTopic(argument) })}>
+            {reply ? (
+              <>
+                <div className="coach-callout">
+                  <CheckCircle2 size={18} />
+                  <strong>Real analysis saved.</strong>
+                </div>
+                <p>{analysis.coachSummary}</p>
+              </>
+            ) : (
+              <div className="panel-empty-state compact">
+                <strong>No coaching response yet.</strong>
+                <p>Run analysis to generate saved coaching from the backend.</p>
+              </div>
+            )}
+            <button className="product-button primary" disabled={!reply || exporting} type="button" onClick={exportAnalysisReport}>
               <FileDown size={17} />
-              Export analysis report
+              {exporting ? 'Exporting...' : 'Export analysis report'}
             </button>
           </article>
         </div>
@@ -258,31 +306,62 @@ function AnalysisSection({ icon, title, text }) {
 
 function buildAnalysis(argument, reply) {
   const normalized = argument.toLowerCase()
+  const hasReply = Boolean(reply)
   const lengthLift = Math.min(9, Math.floor(argument.length / 45))
   const hasEvidence = /\d|study|report|data|research|source/.test(normalized)
   const hasCausality = /because|therefore|leads to|results in/.test(normalized)
-  const strength = Math.min(92, 70 + lengthLift + (hasCausality ? 6 : 0))
+  const strength = hasReply ? Math.min(92, 70 + lengthLift + (hasCausality ? 6 : 0)) : 0
   return {
     strength,
-    evidence: hasEvidence ? 84 : 62,
-    coverage: 77,
-    logic: hasCausality ? 86 : 76,
-    answer: 'The claim is persuasive as a values-based position, but it is not yet complete enough to carry a policy debate.',
-    why: 'It connects access to a desirable social outcome and gives the audience a clear moral frame. The causal bridge between access, population health, and economic strength still needs explicit support.',
-    evidenceNote: hasEvidence
+    evidence: hasReply ? (hasEvidence ? 84 : 42) : 0,
+    coverage: hasReply ? (/(however|although|counter|opposing|tradeoff)/i.test(argument) ? 82 : 48) : 0,
+    logic: hasReply ? (hasCausality ? 86 : 58) : 0,
+    answer: 'Run an analysis to generate a saved DebateHelp response.',
+    why: hasReply
+      ? 'This section is based on the argument you submitted and the latest backend analysis saved for this session.'
+      : 'No backend analysis has been run for this text yet.',
+    evidenceNote: !hasReply
+      ? 'Citation verification starts after you run the analysis.'
+      : hasEvidence
       ? 'The argument signals evidence, but each factual claim should be tied to a named source and a measurable outcome.'
-      : 'No concrete statistics or named studies are present. Add one population-health source and one cost or implementation source.',
-    counterargument: 'A strong opponent will argue that universal access can create funding pressure, capacity constraints, and transition risk. Address those costs instead of treating access alone as sufficient proof.',
-    change: 'Credible evidence that access does not improve measured health outcomes, or that the proposed funding model creates larger harms than it solves, would materially weaken the conclusion.',
+      : 'No concrete statistics or named studies are present. Add at least one source for the main factual claim and one source for implementation tradeoffs.',
+    counterargument: hasReply
+      ? extractCounterSignal(reply)
+      : 'Counterargument guidance appears after a saved analysis response exists.',
+    change: hasReply
+      ? 'Run another analysis after revising your claim to update this saved session and its report.'
+      : 'No conclusion has been generated yet.',
+    coachSummary: summarizeReply(reply),
+    sources: extractCitationSignals(argument),
     reply,
   }
 }
 
-function inferTopic(argument) {
-  if (/health|medical|care/i.test(argument)) return 'Universal Healthcare'
-  if (/income|ubi/i.test(argument)) return 'Universal Basic Income'
-  if (/artificial intelligence|ai regulation/i.test(argument)) return 'AI Regulation'
-  return 'Argument Analysis'
+function extractCitationSignals(argument) {
+  const matches = argument.match(/https?:\/\/\S+|\b\d{4}\b|\b\d+(?:\.\d+)?%|\b(?:study|report|research|source|data|survey|journal)\b/gi) || []
+  return [...new Set(matches)].slice(0, 6).map((signal) => ({
+    source: signal,
+    detail: signal.startsWith('http') ? 'URL included in your argument' : 'Citation or evidence signal found in your argument',
+    credibility: signal.startsWith('http') ? 75 : 60,
+    tone: signal.startsWith('http') ? 'green' : 'amber',
+  }))
+}
+
+function extractCounterSignal(reply) {
+  const sentence = reply
+    .split(/(?<=[.!?])\s+/)
+    .find((item) => /counter|opponent|rebut|however|against|risk/i.test(item))
+  return sentence || 'Use the saved backend response above to identify the strongest opposing line.'
+}
+
+function summarizeReply(reply) {
+  if (!reply) return ''
+  return reply.split(/\n{2,}|(?<=[.!?])\s+/).find(Boolean) || reply
+}
+
+function createSessionId(prefix) {
+  if (globalThis.crypto?.randomUUID) return `${prefix}-${globalThis.crypto.randomUUID()}`
+  return `${prefix}-${Date.now()}`
 }
 
 export default AnalyzePage

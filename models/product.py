@@ -68,6 +68,31 @@ class TeamMemberInvite(Base):
     )
 
 
+class SharedArgument(Base):
+    __tablename__ = "shared_arguments"
+    __table_args__ = (
+        Index("ix_shared_arguments_user_updated", "user_id", "updated_at"),
+    )
+
+    id: Mapped[str] = mapped_column(Text, primary_key=True)
+    user_id: Mapped[str] = mapped_column(Text, nullable=False)
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    body: Mapped[str] = mapped_column(Text, nullable=False)
+    owner: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(Text, nullable=False, default="Draft")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+
 class ProgressMetric(BaseModel):
     label: str
     value: str
@@ -102,6 +127,47 @@ class DashboardResponse(BaseModel):
 
 class SessionHistoryResponse(BaseModel):
     sessions: list[DebateSessionPublic]
+
+
+class ReportPublic(BaseModel):
+    topic: str
+    score: int
+    recommendation: str
+    keyArguments: list[str]
+    evidence: list[str]
+    fallacies: list[str]
+    counterarguments: list[str]
+    sourceSessionId: str
+
+
+class SharedArgumentPublic(BaseModel):
+    id: str
+    title: str
+    body: str
+    owner: str
+    citations: int
+    status: str
+    updated_at: str
+
+
+class SharedArgumentsResponse(BaseModel):
+    arguments: list[SharedArgumentPublic]
+
+
+class SaveSharedArgumentRequest(SecureRequestModel):
+    id: str | None = Field(default=None, max_length=120)
+    title: str = Field(..., min_length=1, max_length=160)
+    body: str = Field(..., min_length=1, max_length=12_000)
+
+    @field_validator("title")
+    @classmethod
+    def valid_title(cls, value: str) -> str:
+        return clean_text(value)
+
+    @field_validator("body")
+    @classmethod
+    def valid_body(cls, value: str) -> str:
+        return clean_text(value, allow_multiline=True)
 
 
 TEAM_MEMBER_ROLES = {"Debater", "Researcher", "Coach", "Speaker"}
