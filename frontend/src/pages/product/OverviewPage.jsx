@@ -10,13 +10,7 @@ import {
   TrendingUp,
   Users,
 } from 'lucide-react'
-import {
-  achievements,
-  progressMetrics,
-  progressSeries,
-  recentSessions,
-  teamMembers,
-} from '../../data/productData.js'
+import { achievements, progressMetrics } from '../../data/productData.js'
 import { productApi } from '../../services/productApi.js'
 
 function OverviewPage({ currentUser, navigateTo, onExport, token }) {
@@ -45,16 +39,13 @@ function OverviewPage({ currentUser, navigateTo, onExport, token }) {
   }, [token])
 
   const metrics = dashboard?.metrics?.length ? dashboard.metrics : progressMetrics
-  const chartValues = dashboard?.progress_series?.length ? dashboard.progress_series : progressSeries
+  const chartValues = dashboard?.progress_series?.length ? dashboard.progress_series : []
   const milestoneData = dashboard?.achievements?.length ? dashboard.achievements : achievements
-  const sessionData = useMemo(() => {
-    if (!dashboard?.recent_sessions?.length) return recentSessions
-    const realTopics = new Set(dashboard.recent_sessions.map((session) => session.topic))
-    return [
-      ...dashboard.recent_sessions,
-      ...recentSessions.filter((session) => !realTopics.has(session.topic)),
-    ]
-  }, [dashboard])
+  const sessionData = useMemo(() => dashboard?.recent_sessions || [], [dashboard])
+  const hasSessions = sessionData.length > 0
+  const latestSession = sessionData[0]
+  const currentUserName = currentUser?.full_name || currentUser?.email || 'You'
+  const currentUserInitials = getInitials(currentUserName)
 
   return (
     <div className="product-page overview-page">
@@ -76,7 +67,6 @@ function OverviewPage({ currentUser, navigateTo, onExport, token }) {
             <strong>{metric.value}</strong>
             <small>
               {metric.change}
-              {!metric.change.startsWith('Best:') && <em> vs last 30 days</em>}
             </small>
           </article>
         ))}
@@ -84,9 +74,17 @@ function OverviewPage({ currentUser, navigateTo, onExport, token }) {
 
       <section className="overview-primary-grid">
         <article className="product-panel progress-panel">
-          <PanelHeading title="Persuasiveness over time" meta={syncing ? 'Syncing...' : 'Last 30 days'} />
+          <PanelHeading
+            title="Persuasiveness over time"
+            meta={syncing ? 'Syncing...' : (chartValues.length ? 'Real saved sessions' : 'No real sessions yet')}
+          />
           <ProgressChart values={chartValues} />
-          <p className="chart-note"><i /> Consistent improvement. Keep reinforcing your evidence.</p>
+          <p className="chart-note">
+            <i />
+            {chartValues.length
+              ? 'This chart only uses sessions saved to your account.'
+              : 'Your first saved analysis will draw this chart.'}
+          </p>
         </article>
 
         <article className="product-panel growth-panel">
@@ -95,17 +93,21 @@ function OverviewPage({ currentUser, navigateTo, onExport, token }) {
             <GrowthList
               title="Strengths"
               tone="green"
-              items={[
-                ['Logic', 'You build coherent, well-structured arguments.'],
-                ['Rebuttals', 'Strong at identifying and countering opposing points.'],
+              items={hasSessions ? [
+                ['Saved work', `${sessionData.length} real session${sessionData.length === 1 ? '' : 's'} recorded.`],
+                ['Latest score', `${latestSession.score}% on ${latestSession.topic}.`],
+              ] : [
+                ['No signal yet', 'Analyze an argument to measure strengths from real work.'],
               ]}
             />
             <GrowthList
               title="Needs improvement"
               tone="amber"
-              items={[
-                ['Evidence', 'Add more data citations and source credibility.'],
-                ['Cross-examination', 'Ask deeper questions to expose weak assumptions.'],
+              items={hasSessions ? [
+                ['Keep practicing', 'Use the report view to turn the latest analysis into next steps.'],
+                ['Add sources', 'Evidence quality improves when your argument includes verifiable citations.'],
+              ] : [
+                ['Waiting for data', 'No weak spots will be guessed before you create a real session.'],
               ]}
             />
           </div>
@@ -120,17 +122,27 @@ function OverviewPage({ currentUser, navigateTo, onExport, token }) {
             onAction={() => navigateTo('/app/history')}
           />
           <div className="session-list">
-            {sessionData.slice(0, 3).map((session) => (
-              <button key={session.id} type="button" onClick={() => navigateTo(`/app/reports?session=${encodeURIComponent(session.id)}`)}>
-                <span className="session-icon"><TrendingUp size={17} /></span>
-                <span>
-                  <strong>{session.title}</strong>
-                  <small>{session.date}</small>
-                </span>
-                <b className={session.score >= 80 ? 'positive' : 'contested'}>{session.score}%</b>
-                <ArrowRight size={16} />
-              </button>
-            ))}
+            {sessionData.length ? (
+              sessionData.slice(0, 3).map((session) => (
+                <button key={session.id} type="button" onClick={() => navigateTo(`/app/reports?session=${encodeURIComponent(session.id)}`)}>
+                  <span className="session-icon"><TrendingUp size={17} /></span>
+                  <span>
+                    <strong>{session.title}</strong>
+                    <small>{session.date}</small>
+                  </span>
+                  <b className={session.score >= 80 ? 'positive' : 'contested'}>{session.score}%</b>
+                  <ArrowRight size={16} />
+                </button>
+              ))
+            ) : (
+              <div className="panel-empty-state">
+                <strong>No real sessions yet.</strong>
+                <p>Analyze an argument and it will appear here with its real score and report.</p>
+                <button type="button" onClick={() => navigateTo('/app/analyze?new=1')}>
+                  Start first analysis <ArrowRight size={15} />
+                </button>
+              </div>
+            )}
           </div>
         </article>
 
@@ -156,19 +168,28 @@ function OverviewPage({ currentUser, navigateTo, onExport, token }) {
 
         <article className="product-panel coach-panel">
           <PanelHeading title="AI coaching notes" />
-          <div className="coach-lead">
-            <CheckCircle2 size={18} />
-            <span>
-              <strong>Your claim is strong.</strong>
-              <small>You present a clear position with logical structure.</small>
-            </span>
-          </div>
-          <p>However, consider improving:</p>
-          <ul>
-            <li>Missing statistics to support key claims.</li>
-            <li>Weak causal evidence in your main argument.</li>
-            <li>No opposing viewpoint addressed proactively.</li>
-          </ul>
+          {hasSessions ? (
+            <>
+              <div className="coach-lead">
+                <CheckCircle2 size={18} />
+                <span>
+                  <strong>Latest real score: {latestSession.score}%.</strong>
+                  <small>{latestSession.title} - {latestSession.date}</small>
+                </span>
+              </div>
+              <p>Next useful moves:</p>
+              <ul>
+                <li>Open the saved report and revise the weakest claim.</li>
+                <li>Add citations before running the next analysis.</li>
+                <li>Practice one rebuttal against your main assumption.</li>
+              </ul>
+            </>
+          ) : (
+            <div className="panel-empty-state compact">
+              <strong>No coaching notes yet.</strong>
+              <p>Coaching is generated from your real saved analyses, not demo data.</p>
+            </div>
+          )}
           <button type="button" onClick={() => navigateTo('/app/analyze')}>
             View full coaching report <ArrowRight size={15} />
           </button>
@@ -177,22 +198,19 @@ function OverviewPage({ currentUser, navigateTo, onExport, token }) {
 
       <section className="overview-bottom-grid">
         <article className="product-panel team-summary">
-          <PanelHeading title="Team workspace" meta="5 members online" />
+          <PanelHeading title="Team workspace" meta={currentUser ? '1 member active' : 'No members loaded'} />
           <div className="team-summary-stats">
-            <div><Users size={18} /><strong>5</strong><span>Members</span></div>
-            <div><Lightbulb size={18} /><strong>32</strong><span>Shared arguments</span></div>
-            <div><Target size={18} /><strong>AI Regulation</strong><span>Current topic</span></div>
+            <div><Users size={18} /><strong>{currentUser ? 1 : 0}</strong><span>Members</span></div>
+            <div><Lightbulb size={18} /><strong>0</strong><span>Shared arguments</span></div>
+            <div><Target size={18} /><strong>No topic yet</strong><span>Current topic</span></div>
           </div>
           <div className="collaboration-row">
             <div className="avatar-stack">
-              {teamMembers.slice(0, 4).map((member) => (
-                <span key={member.initials}>{member.initials}</span>
-              ))}
-              <span>+1</span>
+              {currentUser && <span>{currentUserInitials}</span>}
             </div>
             <div className="live-collaborators">
               <i />
-              <span><strong>{currentUser?.full_name || 'Abish Abdikalikov'}</strong> is editing an argument</span>
+              <span><strong>{currentUserName}</strong> is ready to collaborate</span>
             </div>
           </div>
           <button className="panel-action" type="button" onClick={() => navigateTo('/app/team')}>
@@ -259,8 +277,24 @@ function ProgressChart({ values }) {
   const height = 250
   const min = 45
   const max = 95
+  if (!values.length) {
+    return (
+      <div className="progress-chart empty">
+        <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="No real persuasiveness data yet">
+          {[0, 1, 2, 3].map((lineIndex) => {
+            const y = 18 + lineIndex * 55
+            return <line className="chart-gridline" key={lineIndex} x1="30" x2={width - 30} y1={y} y2={y} />
+          })}
+          <text className="chart-empty-label" x={width / 2} y={height / 2}>No real sessions yet</text>
+        </svg>
+      </div>
+    )
+  }
+
+  const lastValue = values.at(-1)
+  const denominator = Math.max(1, values.length - 1)
   const points = values.map((value, index) => {
-    const x = 30 + (index / (values.length - 1)) * (width - 60)
+    const x = 30 + (index / denominator) * (width - 60)
     const y = 18 + ((max - value) / (max - min)) * (height - 55)
     return [x, y]
   })
@@ -269,7 +303,7 @@ function ProgressChart({ values }) {
 
   return (
     <div className="progress-chart">
-      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Persuasiveness increased to 81 percent over the last 30 days">
+      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`Latest real persuasiveness score is ${lastValue} percent`}>
         {[0, 1, 2, 3].map((lineIndex) => {
           const y = 18 + lineIndex * 55
           return <line className="chart-gridline" key={lineIndex} x1="30" x2={width - 30} y1={y} y2={y} />
@@ -277,10 +311,20 @@ function ProgressChart({ values }) {
         <polygon className="chart-area" points={area} />
         <polyline className="chart-line" points={line} />
         <circle className="chart-dot" cx={points.at(-1)[0]} cy={points.at(-1)[1]} r="5" />
-        <text className="chart-label" x={points.at(-1)[0] - 18} y={points.at(-1)[1] - 12}>81%</text>
+        <text className="chart-label" x={points.at(-1)[0] - 18} y={points.at(-1)[1] - 12}>{lastValue}%</text>
       </svg>
     </div>
   )
 }
 
 export default OverviewPage
+
+function getInitials(name = '') {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase() || 'U'
+}

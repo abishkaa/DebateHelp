@@ -1,108 +1,39 @@
 export const progressMetrics = [
-  { label: 'Debates completed', value: '47', change: '+12%', tone: 'blue' },
-  { label: 'Arguments analyzed', value: '1,238', change: '+18%', tone: 'green' },
-  { label: 'Avg. persuasiveness', value: '81%', change: '+7%', tone: 'amber' },
-  { label: 'Current streak', value: '6 days', change: 'Best: 12 days', tone: 'red' },
+  { label: 'Debates completed', value: '0', change: 'No sessions yet', tone: 'blue' },
+  { label: 'Arguments analyzed', value: '0', change: 'No arguments yet', tone: 'green' },
+  { label: 'Avg. persuasiveness', value: '0%', change: 'No score yet', tone: 'amber' },
+  { label: 'Current streak', value: '0 days', change: 'No activity today', tone: 'red' },
 ]
 
-export const recentSessions = [
-  {
-    id: 'healthcare',
-    title: 'Healthcare Debate',
-    topic: 'Universal Healthcare',
-    score: 89,
-    date: 'Today, 10:24 AM',
-    trend: '+6',
-  },
-  {
-    id: 'ubi',
-    title: 'Universal Basic Income',
-    topic: 'Economic Policy',
-    score: 74,
-    date: 'Jun 22, 3:15 PM',
-    trend: '+2',
-  },
-  {
-    id: 'ai-regulation',
-    title: 'AI Regulation',
-    topic: 'Technology Policy',
-    score: 82,
-    date: 'Jun 20, 11:08 AM',
-    trend: '+8',
-  },
-  {
-    id: 'climate-policy',
-    title: 'Climate Policy',
-    topic: 'Carbon Pricing',
-    score: 78,
-    date: 'Jun 17, 4:42 PM',
-    trend: '-1',
-  },
-  {
-    id: 'education',
-    title: 'Education Reform',
-    topic: 'Standardized Testing',
-    score: 85,
-    date: 'Jun 14, 9:30 AM',
-    trend: '+4',
-  },
-]
+export const recentSessions = []
 
 export const achievements = [
   {
     title: 'Reasoning Scholar',
-    description: 'Completed 50 analyses',
-    progress: 100,
-    status: 'Earned',
+    description: 'Analyze 50 arguments',
+    progress: 0,
+    status: 'In progress',
     tone: 'blue',
   },
   {
-    title: 'Evidence Specialist',
-    description: '90% evidence quality',
-    progress: 90,
-    status: 'Earned',
+    title: 'Debate Builder',
+    description: 'Complete 10 debate sessions',
+    progress: 0,
+    status: 'In progress',
     tone: 'green',
   },
   {
-    title: 'Counterargument Master',
-    description: 'Generated 500 rebuttals',
-    progress: 100,
-    status: 'Earned',
+    title: 'Persuasion Peak',
+    description: 'Reach a 90% average score',
+    progress: 0,
+    status: 'In progress',
     tone: 'amber',
   },
 ]
 
-export const teamMembers = [
-  { name: 'Abish Abdikalikov', initials: 'AA', role: 'Team lead', status: 'editing', tone: 'green' },
-  { name: 'Sarah Chen', initials: 'SC', role: 'Evidence reviewer', status: 'reviewing', tone: 'blue' },
-  { name: 'Daniel Kim', initials: 'DK', role: 'Researcher', status: 'online', tone: 'amber' },
-  { name: 'Maya Ortiz', initials: 'MO', role: 'Speaker', status: 'offline', tone: 'muted' },
-  { name: 'Noah Williams', initials: 'NW', role: 'Coach', status: 'online', tone: 'green' },
-]
+export const teamMembers = []
 
-export const sharedArguments = [
-  {
-    title: 'Risk-based regulation protects innovation',
-    owner: 'Abish',
-    quality: 88,
-    citations: 6,
-    status: 'Ready',
-  },
-  {
-    title: 'Mandatory audits improve accountability',
-    owner: 'Sarah',
-    quality: 81,
-    citations: 4,
-    status: 'Review',
-  },
-  {
-    title: 'Open-source models reduce concentration risk',
-    owner: 'Daniel',
-    quality: 73,
-    citations: 3,
-    status: 'Draft',
-  },
-]
+export const sharedArguments = []
 
 export const citationSources = [
   {
@@ -125,7 +56,7 @@ export const citationSources = [
   },
 ]
 
-export const progressSeries = [68, 61, 56, 82, 86, 71, 59, 65, 74, 74, 81, 76, 70, 70, 80, 72, 60, 55, 63, 63, 74, 74, 83, 69, 75, 81]
+export const progressSeries = []
 
 export const famousDebates = [
   {
@@ -143,24 +74,19 @@ export const famousDebates = [
 ]
 
 export const reportTemplate = {
-  topic: 'Universal Healthcare',
-  score: 89,
-  recommendation: 'Keep the equity framing, add cost evidence, and address implementation risk directly.',
+  topic: 'No session selected',
+  score: 0,
+  recommendation: 'Analyze a real argument to generate a personalized recommendation.',
   keyArguments: [
-    'Universal access improves population health and reduces delayed care.',
-    'Shared risk pools can lower administrative waste and bargaining costs.',
+    'No real session data has been recorded yet.',
   ],
   evidence: [
-    'WHO comparative health systems report - high credibility.',
-    'Lancet population health study - high credibility.',
-    'Cost projections require a country-specific funding model.',
+    'Add sources in an analysis to review evidence quality.',
   ],
   fallacies: [
-    'Avoid implying every universal system has identical outcomes.',
-    'Separate access claims from claims about total national cost.',
+    'Logical risks will appear after a real analysis is saved.',
   ],
   counterarguments: [
-    'Rapid implementation could strain provider capacity.',
-    'Tax incidence and transition costs need explicit treatment.',
+    'Counterarguments will appear after a real analysis is saved.',
   ],
 }

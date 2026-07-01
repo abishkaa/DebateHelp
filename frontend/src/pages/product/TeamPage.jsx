@@ -11,34 +11,46 @@ import {
   Users,
   X,
 } from 'lucide-react'
-import { sharedArguments, teamMembers } from '../../data/productData.js'
 import { PanelHeading, PageHeading } from './OverviewPage.jsx'
 
-const ACTIVITY = [
-  'Abish is editing the opening argument',
-  'Sarah is reviewing evidence quality',
-  'Daniel added a citation',
-  'Noah left a coaching note',
-]
-
-function TeamPage() {
+function TeamPage({ currentUser }) {
   const [activityIndex, setActivityIndex] = useState(0)
-  const [members, setMembers] = useState(teamMembers)
-  const [selectedArgument, setSelectedArgument] = useState(sharedArguments[0])
+  const [members, setMembers] = useState(() => (currentUser ? [buildCurrentMember(currentUser)] : []))
+  const [sharedArgumentItems, setSharedArgumentItems] = useState([])
+  const [selectedArgument, setSelectedArgument] = useState(null)
   const [inviteOpen, setInviteOpen] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteRole, setInviteRole] = useState('Debater')
   const [inviteMessage, setInviteMessage] = useState('')
   const [editorOpen, setEditorOpen] = useState(false)
-  const [editorContent, setEditorContent] = useState(() => buildArgumentDraft(sharedArguments[0]))
+  const [editorContent, setEditorContent] = useState(() => buildArgumentDraft(null))
   const [editorMessage, setEditorMessage] = useState('')
+  const currentUserName = currentUser?.full_name || currentUser?.email || 'You'
+  const activityMessages = [
+    `${currentUserName} is active in the workspace`,
+    sharedArgumentItems.length
+      ? `${sharedArgumentItems.length} shared draft${sharedArgumentItems.length === 1 ? '' : 's'} saved locally`
+      : 'No shared arguments yet',
+    members.length > 1
+      ? `${members.length - 1} invited member${members.length - 1 === 1 ? '' : 's'} pending`
+      : 'Invite members when you are ready',
+  ]
 
   useEffect(() => {
     const timer = window.setInterval(() => {
-      setActivityIndex((current) => (current + 1) % ACTIVITY.length)
+      setActivityIndex((current) => current + 1)
     }, 2800)
     return () => window.clearInterval(timer)
   }, [])
+
+  useEffect(() => {
+    if (!currentUser) return
+    const currentMember = buildCurrentMember(currentUser)
+    setMembers((current) => [
+      currentMember,
+      ...current.filter((member) => !member.isCurrent && member.email !== currentMember.email),
+    ])
+  }, [currentUser])
 
   useEffect(() => {
     setEditorContent(buildArgumentDraft(selectedArgument))
@@ -94,6 +106,29 @@ function TeamPage() {
   }
 
   const saveEditorDraft = () => {
+    const trimmed = editorContent.trim()
+    if (!trimmed) {
+      setEditorMessage('Write a draft before saving.')
+      return
+    }
+
+    const [firstLine] = trimmed.split('\n')
+    const draft = {
+      title: firstLine.trim() || 'Untitled shared argument',
+      owner: currentUserName.split(/\s+/)[0] || 'You',
+      quality: 0,
+      citations: 0,
+      status: 'Draft',
+      body: trimmed,
+    }
+
+    setSharedArgumentItems((current) => {
+      const withoutCurrent = selectedArgument
+        ? current.filter((argument) => argument.title !== selectedArgument.title)
+        : current
+      return [draft, ...withoutCurrent]
+    })
+    setSelectedArgument(draft)
     setEditorMessage('Collaborative draft saved locally.')
   }
 
@@ -107,9 +142,9 @@ function TeamPage() {
 
       <section className="team-metric-strip">
         <div><Users size={19} /><span>Members</span><strong>{members.length}</strong></div>
-        <div><FileText size={19} /><span>Shared arguments</span><strong>32</strong></div>
-        <div><MessageSquareText size={19} /><span>Current topic</span><strong>AI Regulation</strong></div>
-        <div className="collab-pulse"><i /><span>{ACTIVITY[activityIndex]}</span></div>
+        <div><FileText size={19} /><span>Shared arguments</span><strong>{sharedArgumentItems.length}</strong></div>
+        <div><MessageSquareText size={19} /><span>Current topic</span><strong>{selectedArgument?.title || 'No topic yet'}</strong></div>
+        <div className="collab-pulse"><i /><span>{activityMessages[activityIndex % activityMessages.length]}</span></div>
       </section>
 
       <section className="team-workspace-grid">
@@ -127,37 +162,44 @@ function TeamPage() {
         </article>
 
         <article className="product-panel shared-arguments-panel">
-          <PanelHeading title="Shared arguments" meta="AI Regulation" />
+          <PanelHeading title="Shared arguments" meta={`${sharedArgumentItems.length} saved`} />
           <div className="shared-argument-list">
-            {sharedArguments.map((argument) => (
-              <button
-                className={selectedArgument.title === argument.title ? 'selected' : ''}
-                key={argument.title}
-                type="button"
-                onClick={() => setSelectedArgument(argument)}
-              >
-                <span>
-                  <strong>{argument.title}</strong>
-                  <small>{argument.owner} - {argument.citations} citations</small>
-                </span>
-                <b>{argument.quality}%</b>
-                <em>{argument.status}</em>
-              </button>
-            ))}
+            {sharedArgumentItems.length ? (
+              sharedArgumentItems.map((argument) => (
+                <button
+                  className={selectedArgument?.title === argument.title ? 'selected' : ''}
+                  key={argument.title}
+                  type="button"
+                  onClick={() => setSelectedArgument(argument)}
+                >
+                  <span>
+                    <strong>{argument.title}</strong>
+                    <small>{argument.owner} - {argument.citations} citations</small>
+                  </span>
+                  <b>{argument.quality}%</b>
+                  <em>{argument.status}</em>
+                </button>
+              ))
+            ) : (
+              <div className="panel-empty-state compact">
+                <strong>No shared arguments yet.</strong>
+                <p>Create a draft in the editor and it will appear here.</p>
+                <button type="button" onClick={() => setEditorOpen(true)}>
+                  Create first draft <ArrowRight size={15} />
+                </button>
+              </div>
+            )}
           </div>
         </article>
 
         <article className="product-panel team-review-panel">
-          <PanelHeading title="Argument review" meta="Live document" />
-          <div className="live-editing-line"><i /> Sarah is reviewing this paragraph...</div>
-          <h3>{selectedArgument.title}</h3>
-          <p>
-            A risk-based regulatory model preserves room for low-risk innovation while requiring independent
-            accountability for systems that affect employment, healthcare, education, and public safety.
-          </p>
+          <PanelHeading title="Argument review" meta={selectedArgument ? 'Local draft' : 'No draft selected'} />
+          <div className="live-editing-line"><i /> {selectedArgument ? 'Draft ready for review.' : 'No teammate activity yet.'}</div>
+          <h3>{selectedArgument?.title || 'No shared argument yet'}</h3>
+          <p>{selectedArgument?.body || 'Open the collaborative editor to create the first shared argument for this workspace.'}</p>
           <div className="review-notes">
-            <div><CheckCircle2 size={17} /><span><strong>Logical structure</strong><small>The policy mechanism follows the stated risk.</small></span></div>
-            <div><MessageSquareText size={17} /><span><strong>Sarah</strong><small>Add a source defining high-risk use cases.</small></span></div>
+            <div><CheckCircle2 size={17} /><span><strong>Saved drafts</strong><small>{sharedArgumentItems.length} real shared draft{sharedArgumentItems.length === 1 ? '' : 's'} in this workspace.</small></span></div>
+            <div><MessageSquareText size={17} /><span><strong>Team notes</strong><small>Invite members to add collaborative feedback.</small></span></div>
           </div>
           {editorOpen && (
             <div className="collaborative-editor" aria-label="Collaborative argument editor">
@@ -243,7 +285,22 @@ function TeamPage() {
 }
 
 function buildArgumentDraft(argument) {
-  return `${argument.title}\n\nA risk-based regulatory model preserves room for low-risk innovation while requiring independent accountability for systems that affect employment, healthcare, education, and public safety.\n\nReview focus:\n- Define the risk tier clearly.\n- Add one source for public-safety impact.\n- Prepare a rebuttal to compliance-cost objections.`
+  if (argument?.body) return argument.body
+  if (argument?.title) return `${argument.title}\n\n`
+  return 'Untitled shared argument\n\nWrite your collaborative claim here.\n\nReview focus:\n- Add the warrant.\n- Add one source.\n- Prepare one rebuttal.'
+}
+
+function buildCurrentMember(currentUser) {
+  const name = currentUser.full_name || currentUser.email || 'Current User'
+  return {
+    email: currentUser.email || 'current-user',
+    initials: getInitials(name),
+    isCurrent: true,
+    name,
+    role: currentUser.role || 'Workspace owner',
+    status: 'Active',
+    tone: 'green',
+  }
 }
 
 function nameFromEmail(email) {

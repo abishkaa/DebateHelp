@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import re
 from typing import Any
 
@@ -7,13 +7,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.product import DebateSession
 
-BASE_DEBATES = 47
-BASE_ARGUMENTS = 1_238
-BASE_PERSUASIVENESS = 81
-BASE_PROGRESS_SERIES = [
-    68, 61, 56, 82, 86, 71, 59, 65, 74, 74, 81, 76, 70,
-    70, 80, 72, 60, 55, 63, 63, 74, 74, 83, 69, 75, 81,
-]
 _memory_sessions_by_user: dict[str, dict[str, dict[str, Any]]] = {}
 
 
@@ -26,7 +19,7 @@ def _value(session: DebateSession | dict[str, Any], key: str):
 def infer_topic(message: str) -> str:
     normalized = message.lower()
     topic_patterns = [
-        (r"health|medical|care", "Universal Healthcare"),
+        (r"\b(?:healthcare|health care|medical|medicine|public health)\b", "Universal Healthcare"),
         (r"basic income|\bubi\b|income guarantee", "Universal Basic Income"),
         (r"artificial intelligence|ai regulation|high-risk systems", "AI Regulation"),
         (r"climate|carbon|emission", "Climate Policy"),
@@ -143,7 +136,7 @@ async def get_user_sessions(db: AsyncSession | None, user_id: str, limit: int = 
 def serialize_session(session: DebateSession | dict[str, Any], previous_score: int | None = None) -> dict[str, object]:
     score = int(_value(session, "score"))
     user_id = str(_value(session, "user_id"))
-    trend_value = score - previous_score if previous_score is not None else 1
+    trend_value = score - previous_score if previous_score is not None else 0
     updated_at = _value(session, "updated_at")
     storage_prefix = f"{user_id}:"
     public_id = str(_value(session, "id")).removeprefix(storage_prefix)
@@ -158,17 +151,51 @@ def serialize_session(session: DebateSession | dict[str, Any], previous_score: i
     }
 
 
+def _plural(value: int, singular: str, plural: str | None = None) -> str:
+    return f"{value} {singular if value == 1 else plural or f'{singular}s'}"
+
+
+def _bounded_progress(current: int, target: int) -> int:
+    if target <= 0:
+        return 0
+    return min(100, round(current / target * 100))
+
+
+def _session_activity_date(session: DebateSession | dict[str, Any]):
+    updated_at = _value(session, "updated_at")
+    if updated_at.tzinfo is None:
+        updated_at = updated_at.replace(tzinfo=timezone.utc)
+    else:
+        updated_at = updated_at.astimezone(timezone.utc)
+    return updated_at.date()
+
+
+def _current_streak_days(sessions: list[DebateSession | dict[str, Any]]) -> int:
+    if not sessions:
+        return 0
+
+    activity_dates = {_session_activity_date(session) for session in sessions}
+    cursor = datetime.now(timezone.utc).date()
+    if cursor not in activity_dates:
+        return 0
+
+    streak = 0
+    while cursor in activity_dates:
+        streak += 1
+        cursor -= timedelta(days=1)
+    return streak
+
+
 def build_dashboard(sessions: list[DebateSession | dict[str, Any]]) -> dict[str, object]:
     real_debates = len(sessions)
     real_arguments = sum(int(_value(session, "argument_count")) for session in sessions)
-    debates = BASE_DEBATES + real_debates
-    arguments = BASE_ARGUMENTS + real_arguments
-    score_total = BASE_PERSUASIVENESS * BASE_DEBATES + sum(int(_value(session, "score")) for session in sessions)
-    average = round(score_total / max(1, BASE_DEBATES + real_debates))
+    score_total = sum(int(_value(session, "score")) for session in sessions)
+    average = round(score_total / real_debates) if real_debates else 0
+    streak = _current_streak_days(sessions)
 
     chronological = list(reversed(sessions))
     real_scores = [int(_value(session, "score")) for session in chronological]
-    progress_series = (BASE_PROGRESS_SERIES + real_scores)[-26:]
+    progress_series = real_scores[-26:]
     recent = []
     for index, session in enumerate(sessions[:10]):
         previous = int(_value(sessions[index + 1], "score")) if index + 1 < len(sessions) else None
@@ -176,33 +203,53 @@ def build_dashboard(sessions: list[DebateSession | dict[str, Any]]) -> dict[str,
 
     return {
         "metrics": [
-            {"label": "Debates completed", "value": f"{debates:,}", "change": f"+{max(1, real_debates)}", "tone": "blue"},
-            {"label": "Arguments analyzed", "value": f"{arguments:,}", "change": f"+{max(1, real_arguments)}", "tone": "green"},
-            {"label": "Avg. persuasiveness", "value": f"{average}%", "change": f"{average - BASE_PERSUASIVENESS:+d}%", "tone": "amber"},
-            {"label": "Current streak", "value": "6 days", "change": "Best: 12 days", "tone": "red"},
+            {
+                "label": "Debates completed",
+                "value": f"{real_debates:,}",
+                "change": "All time" if real_debates else "No sessions yet",
+                "tone": "blue",
+            },
+            {
+                "label": "Arguments analyzed",
+                "value": f"{real_arguments:,}",
+                "change": "All time" if real_arguments else "No arguments yet",
+                "tone": "green",
+            },
+            {
+                "label": "Avg. persuasiveness",
+                "value": f"{average}%",
+                "change": f"Across {_plural(real_debates, 'session')}" if real_debates else "No score yet",
+                "tone": "amber",
+            },
+            {
+                "label": "Current streak",
+                "value": _plural(streak, "day"),
+                "change": "Active today" if streak else "No activity today",
+                "tone": "red",
+            },
         ],
         "progress_series": progress_series,
         "recent_sessions": recent,
         "achievements": [
             {
                 "title": "Reasoning Scholar",
-                "description": "Completed 50 analyses",
-                "progress": min(100, round(arguments / 50 * 100)),
-                "status": "Earned" if arguments >= 50 else "In progress",
+                "description": "Analyze 50 arguments",
+                "progress": _bounded_progress(real_arguments, 50),
+                "status": "Earned" if real_arguments >= 50 else "In progress",
                 "tone": "blue",
             },
             {
-                "title": "Evidence Specialist",
-                "description": "90% evidence quality",
-                "progress": 90,
-                "status": "Earned",
+                "title": "Debate Builder",
+                "description": "Complete 10 debate sessions",
+                "progress": _bounded_progress(real_debates, 10),
+                "status": "Earned" if real_debates >= 10 else "In progress",
                 "tone": "green",
             },
             {
-                "title": "Counterargument Master",
-                "description": "Generated 500 rebuttals",
-                "progress": 100,
-                "status": "Earned",
+                "title": "Persuasion Peak",
+                "description": "Reach a 90% average score",
+                "progress": average if real_debates else 0,
+                "status": "Earned" if real_debates and average >= 90 else "In progress",
                 "tone": "amber",
             },
         ],

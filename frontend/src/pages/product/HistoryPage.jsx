@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ArrowRight, CalendarDays, Search, TrendingUp } from 'lucide-react'
-import { famousDebates, recentSessions } from '../../data/productData.js'
+import { famousDebates } from '../../data/productData.js'
 import { productApi } from '../../services/productApi.js'
 import { PageHeading } from './OverviewPage.jsx'
 
@@ -34,22 +34,13 @@ function HistoryPage({ currentPath = '', navigateTo, token }) {
     }
   }, [token])
 
-  const sessions = useMemo(() => {
-    if (liveSessions.length === 0) return recentSessions
-    const realTopics = new Set(liveSessions.map((session) => session.topic))
-    return [
-      ...liveSessions,
-      ...recentSessions.filter((session) => !realTopics.has(session.topic)),
-    ]
-  }, [liveSessions])
-
   const filtered = useMemo(() => {
     const normalized = query.trim().toLowerCase()
-    if (!normalized) return sessions
-    return sessions.filter((session) => (
+    if (!normalized) return liveSessions
+    return liveSessions.filter((session) => (
       `${session.title} ${session.topic}`.toLowerCase().includes(normalized)
     ))
-  }, [query, sessions])
+  }, [query, liveSessions])
 
   return (
     <div className="product-page history-page">
@@ -98,21 +89,28 @@ function HistoryPage({ currentPath = '', navigateTo, token }) {
           ))}
         </section>
       ) : (
-        <HistoryEmptyState onOpen={(title) => {
-          setQuery('')
-          navigateTo(`/app/analyze?topic=${encodeURIComponent(title)}`)
-        }} />
+        <HistoryEmptyState
+          hasQuery={Boolean(query.trim())}
+          onOpen={(title) => {
+            setQuery('')
+            navigateTo(`/app/analyze?topic=${encodeURIComponent(title)}`)
+          }}
+        />
       )}
     </div>
   )
 }
 
-function HistoryEmptyState({ onOpen }) {
+function HistoryEmptyState({ hasQuery, onOpen }) {
   return (
     <section className="product-panel professional-empty">
       <TrendingUp size={28} />
-      <h2>No debates match this search.</h2>
-      <p>Explore a famous debate and use its structure as your next practice case.</p>
+      <h2>{hasQuery ? 'No real sessions match this search.' : 'No real sessions yet.'}</h2>
+      <p>
+        {hasQuery
+          ? 'Try a different search term, or start a new analysis.'
+          : 'Analyze an argument to create your first saved archive entry. You can also use a classic debate as a practice prompt.'}
+      </p>
       <div>
         {famousDebates.map((debate) => (
           <button key={debate.title} type="button" onClick={() => onOpen(debate.title)}>

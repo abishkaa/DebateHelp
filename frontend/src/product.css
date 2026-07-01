@@ -485,6 +485,16 @@ kbd {
   font-weight: 800;
 }
 
+.chart-empty-label {
+  fill: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-anchor: middle;
+  text-transform: uppercase;
+}
+
 .chart-note {
   margin: -2px 16px 5px;
   color: var(--muted);
@@ -1552,6 +1562,64 @@ kbd {
   color: var(--muted);
   font-size: 0.7rem;
   line-height: 1.45;
+}
+
+.panel-empty-state {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at 14% 0%, rgba(255, 24, 218, 0.08), transparent 34%),
+    rgba(255, 255, 255, 0.02);
+  color: var(--muted);
+}
+
+.panel-empty-state.compact {
+  padding: 14px;
+}
+
+.panel-empty-state > svg {
+  color: var(--blue);
+}
+
+.panel-empty-state strong {
+  color: var(--text);
+  font-size: 0.82rem;
+}
+
+.panel-empty-state p {
+  margin: 0;
+  font-size: 0.73rem;
+  line-height: 1.55;
+}
+
+.panel-empty-state button {
+  display: inline-grid;
+  grid-auto-flow: column;
+  gap: 7px;
+  align-items: center;
+  justify-content: center;
+  width: max-content;
+  max-width: 100%;
+  padding: 9px 12px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: rgba(0, 245, 255, 0.08);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.product-button:disabled,
+.product-button:disabled:hover {
+  cursor: not-allowed;
+  opacity: 0.52;
+  transform: none;
 }
 
 .team-metric-strip {
@@ -11103,4 +11171,12 @@ body,
 .product-nav button svg,
 .product-mobile-tabs button svg {
   stroke-width: 2.6 !important;
+}
+
+.product-button:disabled,
+.product-button:disabled:hover {
+  cursor: not-allowed !important;
+  opacity: 0.52 !important;
+  transform: none !important;
+  box-shadow: none !important;
 }
