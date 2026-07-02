@@ -53,6 +53,7 @@ function LiveDebatePage({ currentPath = '', currentUser, token }) {
   )
   const speakerScores = useMemo(() => computeSpeakerScores(customEntries), [customEntries])
   const hasScoredEntries = customEntries.some((entry) => typeof entry.score === 'number')
+  const latestImprovementPlan = useMemo(() => getLatestImprovementPlan(customEntries), [customEntries])
   const startLiveDebate = () => {
     setError('')
     setRunning((current) => {
@@ -276,6 +277,17 @@ function LiveDebatePage({ currentPath = '', currentUser, token }) {
           <article className="product-panel live-coach-note" data-product-focus="coach" ref={coachNoteRef}>
             <PanelHeading title="Coach note" />
             <p>{liveAnalysis ? summarizeLiveAnalysis(liveAnalysis) : 'Coach notes appear after DebateHelp analyzes a live statement.'}</p>
+            {latestImprovementPlan.length ? (
+              <div className="live-improvement-list" aria-label="Latest live debate improvement plan">
+                {latestImprovementPlan.slice(0, 3).map((item, index) => (
+                  <div key={`${item.area}-${item.action}`}>
+                    <span>{index + 1}</span>
+                    <strong>{item.area} · {item.score}%</strong>
+                    <small>{item.action}</small>
+                  </div>
+                ))}
+              </div>
+            ) : null}
           </article>
         </div>
       </section>
@@ -319,12 +331,22 @@ function getComputedScore(analysis) {
 }
 
 function normalizeLiveAnalysis(analysis, statement, reply) {
-  if (getComputedScore(analysis) !== null) return analysis
+  if (getComputedScore(analysis) !== null) {
+    return {
+      ...analysis,
+      improvementPlan: normalizeImprovementPlan(analysis?.improvementPlan || analysis?.improvement_plan),
+    }
+  }
 
   const recoveredScore = scoreLiveStatement(statement, reply)
   const counterargument = buildSuggestedCounterargument(analysis, reply, statement)
   const strongerFraming = extractLabeledSection(reply, 'Stronger framing')
+  const fallbackPlan = normalizeImprovementPlan(analysis?.improvementPlan || analysis?.improvement_plan)
+  const improvementPlan = fallbackPlan.length
+    ? fallbackPlan
+    : buildFallbackImprovementPlan(statement, recoveredScore, counterargument)
   const recommendations = [
+    ...improvementPlan.map((item) => item.action),
     strongerFraming,
     ...(Array.isArray(analysis?.recommendations) ? analysis.recommendations : []),
   ].filter(Boolean)
@@ -343,6 +365,7 @@ function normalizeLiveAnalysis(analysis, statement, reply) {
     recommendations: recommendations.length ? recommendations.slice(0, 4) : [
       'Add a named source, explain the mechanism, and answer the strongest alternative explanation.',
     ],
+    improvementPlan,
     counterargument,
     counterarguments: Array.isArray(analysis?.counterarguments) && analysis.counterarguments.length
       ? analysis.counterarguments
@@ -446,7 +469,11 @@ function buildLiveSignals(entries) {
   const analysis = latestScored.analysis || {}
   const sources = Array.isArray(analysis.sources) ? analysis.sources : []
   const fallacies = Array.isArray(analysis.fallacies) ? analysis.fallacies : []
-  const recommendations = Array.isArray(analysis.recommendations) ? analysis.recommendations : []
+  const improvementPlan = normalizeImprovementPlan(analysis.improvementPlan || analysis.improvement_plan)
+  const recommendations = improvementPlan.length
+    ? improvementPlan.map((item) => item.action)
+    : Array.isArray(analysis.recommendations) ? analysis.recommendations : []
+  const topPlan = improvementPlan[0]
   return [
     {
       title: 'Latest statement analyzed',
@@ -469,10 +496,63 @@ function buildLiveSignals(entries) {
     },
     {
       title: 'Next coaching move',
-      detail: recommendations[0] || 'Keep adding live statements to build a stronger session report.',
+      detail: topPlan
+        ? `${topPlan.area}: ${topPlan.action}`
+        : recommendations[0] || 'Keep adding live statements to build a stronger session report.',
       tone: recommendations.length ? 'amber' : 'green',
     },
   ]
+}
+
+function getLatestImprovementPlan(entries) {
+  const latestScored = [...entries]
+    .reverse()
+    .find((entry) => typeof entry.score === 'number' && entry.status === 'Analyzed')
+  if (!latestScored?.analysis) return []
+  return normalizeImprovementPlan(latestScored.analysis.improvementPlan || latestScored.analysis.improvement_plan)
+}
+
+function normalizeImprovementPlan(plan) {
+  if (!Array.isArray(plan)) return []
+  return plan.slice(0, 6).map((item, index) => ({
+    area: item?.area || `Priority ${index + 1}`,
+    score: toScore(item?.score ?? 0),
+    action: item?.action || 'Add a clearer source, warrant, or answer to the strongest objection.',
+  }))
+}
+
+function buildFallbackImprovementPlan(statement, score, counterargument) {
+  const normalized = statement.toLowerCase()
+  const hasEvidence = /\bstudy\b|\bresearch\b|\bdata\b|\breport\b|\bsource\b|\bstatistic\b|\b\d{4}\b|\b\d+(?:\.\d+)?%|https?:\/\//.test(normalized)
+  const hasReasoning = /\bbecause\b|\btherefore\b|leads? to|results? in|so that|causes?/.test(normalized)
+  const hasClash = /\bhowever\b|\balthough\b|\beven if\b|\boppos|\bcounter|\btrade-?off\b/.test(normalized)
+  const plan = []
+  if (!hasEvidence) {
+    plan.push({
+      area: 'Evidence',
+      score: toScore(score - 10),
+      action: 'Add one named source, statistic, report, year, or URL for the central factual premise.',
+    })
+  }
+  if (!hasReasoning) {
+    plan.push({
+      area: 'Reasoning',
+      score: toScore(score - 8),
+      action: 'Explain the because-chain from cause to mechanism to measurable outcome.',
+    })
+  }
+  if (!hasClash || !counterargument) {
+    plan.push({
+      area: 'Clash',
+      score: toScore(score - 12),
+      action: 'Answer the strongest opposing explanation before the opponent uses it.',
+    })
+  }
+  return plan.length ? plan : [{
+    area: 'Advanced polish',
+    score,
+    action: 'Quantify the impact, compare it to the alternative, and pre-answer the most technical objection.',
+  }]
 }
 
 function entryStatusTone(entry) {

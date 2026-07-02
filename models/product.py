@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import DateTime, Index, Integer, Text, func
@@ -137,6 +138,7 @@ class ReportPublic(BaseModel):
     evidence: list[str]
     fallacies: list[str]
     counterarguments: list[str]
+    improvementPlan: list[dict[str, Any]] = Field(default_factory=list)
     sourceSessionId: str
 
 

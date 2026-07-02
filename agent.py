@@ -2,6 +2,7 @@ import ast
 import re
 from collections.abc import Awaitable, Callable
 
+from services.argument_analysis import analyze_argument
 from services.oylan import OylanUnavailableError, send_message
 from tools import check_facts, search_counterarguments, suggest_sources
 
@@ -143,6 +144,17 @@ def _clean_final_answer(text: str) -> str:
 def fallback_debate_response(user_argument: str, difficulty: str) -> str:
     argument = user_argument.strip()
     normalized = argument.lower()
+    try:
+        computed = analyze_argument(argument)
+    except Exception:
+        computed = {}
+    computed_scores = computed.get("scores", {}) if isinstance(computed, dict) else {}
+    improvement_items = computed.get("improvementPlan", []) if isinstance(computed, dict) else []
+    priority_fixes = [
+        f"{item.get('area', 'Priority')}: {item.get('action')}"
+        for item in improvement_items[:3]
+        if isinstance(item, dict) and item.get("action")
+    ]
     has_causal_link = bool(re.search(r"\bbecause\b|\btherefore\b|leads? to|results? in", normalized))
     has_evidence = bool(re.search(r"\bstudy\b|\bresearch\b|\bdata\b|\breport\b|\bsource\b|\bstatistic", normalized))
     acknowledges_opposition = bool(re.search(r"\bhowever\b|\balthough\b|\boppos|\bcounter|\btrade-?off", normalized))
@@ -187,8 +199,10 @@ def fallback_debate_response(user_argument: str, difficulty: str) -> str:
     scrutiny = "Apply adversarial scrutiny to each premise." if difficulty == "hard" else "Test the central premise before expanding the claim."
     return "\n\n".join(
         [
+            f"Computed diagnosis: {int(computed_scores.get('strength', 0))}% overall, evidence {int(computed_scores.get('evidence', 0))}%, reasoning {int(computed_scores.get('reasoning', 0))}%, clash {int(computed_scores.get('coverage', 0))}%.",
             f"Strongest part: {' '.join(strengths)}",
             f"Main weakness: {' '.join(weaknesses)}",
+            f"Priority fixes: {' '.join(priority_fixes) if priority_fixes else 'Add one exact source, explain the causal mechanism, and answer the strongest objection.'}",
             f"Counterargument: {counterargument}",
             f"Stronger framing: {stronger} {scrutiny}",
             "Confidence: Moderate. A credible primary source or a clearly defined comparison case could materially change this assessment.",

@@ -159,6 +159,13 @@ async def get_optional_db() -> AsyncGenerator[AsyncSession | None, None]:
     try:
         async with AsyncSessionLocal() as session:
             try:
+                await session.execute(text("select 1"))
+            except (ConnectionError, OSError, SQLAlchemyError) as exc:
+                await disable_database(exc)
+                yield None
+                return
+
+            try:
                 yield session
             except Exception:
                 await session.rollback()

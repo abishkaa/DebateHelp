@@ -500,6 +500,10 @@ async def build_session_report(
     argument_count = int(_value(session, "argument_count"))
     analysis = analyze_argument(latest_argument, latest_reply)
     analysis_scores = analysis.get("scores", {})
+    improvement_plan = [
+        item for item in list(analysis.get("improvementPlan") or [])
+        if isinstance(item, dict)
+    ]
 
     key_arguments = list(analysis.get("key_arguments") or []) or [
         f"{_plural(argument_count, 'saved argument entry')} exists for this session."
@@ -526,9 +530,14 @@ async def build_session_report(
         f"This report is based on {argument_count} saved argument "
         f"{'entry' if argument_count == 1 else 'entries'}."
     )
-    first_tip = next(iter(analysis.get("recommendations") or []), "")
+    first_plan = improvement_plan[0] if improvement_plan else None
+    first_tip = (
+        f"{first_plan.get('area', 'Priority')}: {first_plan.get('action')}"
+        if first_plan
+        else next(iter(analysis.get("recommendations") or []), "")
+    )
     if first_tip:
-        recommendation += f" Next step: {first_tip}"
+        recommendation += f" Priority fix: {first_tip}"
     elif latest_reply:
         recommendation += f" Most recent coaching: {_short_excerpt(latest_reply, 220)}"
 
@@ -540,6 +549,7 @@ async def build_session_report(
         "evidence": evidence,
         "fallacies": risks,
         "counterarguments": counters,
+        "improvementPlan": improvement_plan[:6],
         "sourceSessionId": public_session_id,
     }
 

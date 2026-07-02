@@ -284,7 +284,236 @@ def key_sentences(text: str, limit: int = 3) -> list[str]:
     return [sentence for _, sentence in ranked[:limit] if sentence]
 
 
-def recommendations(scores: dict[str, Any], fallacies: list[dict[str, Any]], sources: list[dict[str, Any]]) -> list[str]:
+def score_status(score: int | float) -> str:
+    numeric = int(score)
+    if numeric >= 82:
+        return "strong"
+    if numeric >= 65:
+        return "usable"
+    if numeric >= 45:
+        return "needs work"
+    return "urgent"
+
+
+def metric_diagnostics(
+    scores: dict[str, Any],
+    fallacies: list[dict[str, Any]],
+    sources: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    named_or_url_sources = [
+        source for source in sources
+        if str(source.get("tone")) == "green" or str(source.get("source", "")).startswith(("http://", "https://"))
+    ]
+    return [
+        {
+            "area": "Claim clarity",
+            "score": int(scores["claim_clarity"]),
+            "status": score_status(scores["claim_clarity"]),
+            "signal": f"{scores['claim_hits']} claim marker(s), {scores['word_count']} words",
+            "meaning": "Measures whether the argument clearly names an actor, action, and outcome.",
+        },
+        {
+            "area": "Evidence quality",
+            "score": int(scores["evidence"]),
+            "status": score_status(scores["evidence"]),
+            "signal": f"{scores['evidence_hits']} evidence signal(s), {len(named_or_url_sources)} exact/link citation(s)",
+            "meaning": "Measures named sources, statistics, years, URLs, studies, and verifiable data signals.",
+        },
+        {
+            "area": "Reasoning depth",
+            "score": int(scores["reasoning"]),
+            "status": score_status(scores["reasoning"]),
+            "signal": f"{scores['reasoning_hits']} causal connector(s), {scores['impact_hits']} impact marker(s)",
+            "meaning": "Measures whether the claim explains the mechanism connecting evidence to impact.",
+        },
+        {
+            "area": "Counterargument coverage",
+            "score": int(scores["coverage"]),
+            "status": score_status(scores["coverage"]),
+            "signal": f"{scores['counter_hits']} opposition marker(s), {scores['qualifier_hits']} qualifier(s)",
+            "meaning": "Measures whether the argument anticipates objections, tradeoffs, and alternative explanations.",
+        },
+        {
+            "area": "Logical consistency",
+            "score": int(scores["logic"]),
+            "status": score_status(scores["logic"]),
+            "signal": f"{len(fallacies)} fallacy flag(s), average sentence length {scores['avg_sentence_length']} words",
+            "meaning": "Measures overclaiming, absolute language, attacks, false choices, and readability pressure.",
+        },
+    ]
+
+
+def improvement_plan(
+    text: str,
+    topic: str,
+    scores: dict[str, Any],
+    fallacies: list[dict[str, Any]],
+    sources: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    plans: list[dict[str, Any]] = []
+    has_exact_source = any(
+        str(source.get("tone")) == "green" or str(source.get("source", "")).startswith(("http://", "https://"))
+        for source in sources
+    )
+
+    def add(
+        area: str,
+        score_key: str,
+        problem: str,
+        why: str,
+        action: str,
+        example: str,
+        detected: str,
+        priority: int,
+    ) -> None:
+        score = int(scores.get(score_key, 0))
+        plans.append(
+            {
+                "area": area,
+                "score": score,
+                "status": score_status(score),
+                "problem": problem,
+                "why": why,
+                "action": action,
+                "example": example,
+                "detected": detected,
+                "priority": priority,
+            }
+        )
+
+    if scores["claim_clarity"] < 72:
+        add(
+            "Claim",
+            "claim_clarity",
+            "The central claim is not yet framed as a clear actor, action, and measurable outcome.",
+            "A judge needs to know exactly what policy or position you defend before weighing evidence.",
+            "Rewrite the opening as actor + action + mechanism + outcome.",
+            f"{topic}: The actor should do X because it changes Y, producing Z measurable benefit.",
+            f"{scores['claim_hits']} claim marker(s) detected.",
+            1,
+        )
+    elif scores["word_count"] < 90:
+        add(
+            "Claim",
+            "claim_clarity",
+            "The claim is readable, but the argument is still too short to carry a full debate burden.",
+            "Short arguments often skip definitions, mechanism, and weighing, which makes them easy to attack.",
+            "Add one definition sentence and one sentence explaining the standard for winning the debate.",
+            "Define the key term, then say which impact should matter most and why.",
+            f"{scores['word_count']} words detected.",
+            5,
+        )
+
+    if scores["evidence"] < 72 or not has_exact_source:
+        if not sources:
+            problem = "No citation, statistic, study, report, year, URL, or named evidence signal was detected."
+            detected = "0 evidence signals detected."
+        elif not has_exact_source:
+            problem = "Evidence language is present, but it is not tied to an exact source or link."
+            detected = f"{len(sources)} loose evidence signal(s), 0 exact/link citation(s)."
+        else:
+            problem = "Evidence exists, but it needs more context to prove the central premise."
+            detected = f"{len(sources)} evidence signal(s) detected."
+        add(
+            "Evidence",
+            "evidence",
+            problem,
+            "Evidence only persuades when the audience can verify who found it, when, and under what conditions.",
+            "Add one named source with date, method, and the exact fact it proves.",
+            "According to [organization/report/year], [specific finding], which proves [premise].",
+            detected,
+            2,
+        )
+
+    if scores["reasoning"] < 72 or scores["reasoning_hits"] < 2:
+        add(
+            "Reasoning",
+            "reasoning",
+            "The causal warrant is under-explained.",
+            "Opponents can concede your fact but deny that it causes your conclusion.",
+            "Add a because-chain: cause -> mechanism -> affected group -> measurable outcome.",
+            "This causes the outcome because it changes incentives/capacity/behavior in this specific way.",
+            f"{scores['reasoning_hits']} reasoning connector(s), {scores['impact_hits']} impact marker(s).",
+            3,
+        )
+
+    if scores["coverage"] < 68 or scores["counter_hits"] == 0:
+        add(
+            "Clash",
+            "coverage",
+            "The argument does not directly answer the strongest opposing explanation or tradeoff.",
+            "Debates are won on clash; ignoring the best objection lets the opponent define the round.",
+            "Add a concession-plus-answer sentence that names the opponent's best point and explains why yours still wins.",
+            "Even if opponents argue [best objection], my side still wins because [comparative reason].",
+            f"{scores['counter_hits']} counterargument marker(s), {scores['qualifier_hits']} qualifier(s).",
+            4,
+        )
+
+    if scores["impact_hits"] == 0:
+        add(
+            "Impact weighing",
+            "reasoning",
+            "The argument does not clearly weigh why the outcome matters more than competing concerns.",
+            "A good impact tells the judge magnitude, probability, timeframe, or affected group.",
+            "Add one impact-weighing sentence that compares your benefit against the main cost.",
+            "This matters more because it affects [group] at [scale] sooner/more certainly than the alternative.",
+            "0 impact markers detected.",
+            5,
+        )
+
+    if fallacies:
+        first = fallacies[0]
+        add(
+            "Logic",
+            "logic",
+            f"{first['name']} risk: {first['detail']}",
+            "A reasoning-risk flag means the wording may be too absolute, too personal, or missing intermediate proof.",
+            "Narrow the wording and add the missing condition or exception before presenting it.",
+            "Replace absolute language with a qualified claim and one condition under which it would not hold.",
+            f"{len(fallacies)} fallacy flag(s) detected.",
+            6,
+        )
+
+    if scores["avg_sentence_length"] > 34 or scores["readability"] < 58:
+        add(
+            "Delivery",
+            "readability",
+            "The sentence structure is likely too dense for live debating.",
+            "Judges and opponents process shorter signposted claims more reliably under time pressure.",
+            "Split the longest sentence into claim, evidence, and warrant.",
+            "First: claim. Second: evidence. Third: why that evidence proves the claim.",
+            f"Average sentence length is {scores['avg_sentence_length']} words; readability grade is {scores['readability_grade']}.",
+            7,
+        )
+
+    if not plans:
+        plans.append(
+            {
+                "area": "Advanced polish",
+                "score": int(scores["strength"]),
+                "status": score_status(scores["strength"]),
+                "problem": "The core structure is strong; the next gain is precision, not basic repair.",
+                "why": "High-scoring arguments improve by becoming harder to misinterpret or turn.",
+                "action": "Add a comparison case, quantify the main impact, and pre-answer the opponent's most technical objection.",
+                "example": "Compared with [alternative], this works better because [mechanism] produces [measured impact].",
+                "detected": f"{scores['evidence_hits']} evidence signal(s), {scores['reasoning_hits']} reasoning connector(s), {scores['counter_hits']} counter marker(s).",
+                "priority": 1,
+            }
+        )
+
+    plans.sort(key=lambda item: (int(item["score"]), int(item["priority"])))
+    return plans[:6]
+
+
+def recommendations(
+    scores: dict[str, Any],
+    fallacies: list[dict[str, Any]],
+    sources: list[dict[str, Any]],
+    plan: list[dict[str, Any]] | None = None,
+) -> list[str]:
+    if plan:
+        return [str(item["action"]) for item in plan[:5]]
+
     tips: list[str] = []
     if scores["claim_clarity"] < 65:
         tips.append("State the main claim in one sentence using clear actor, action, and outcome.")
@@ -333,7 +562,9 @@ def analyze_argument(argument: str, reply: str = "") -> dict[str, Any]:
     sources = extract_sources(clean_argument)
     fallacies = detect_fallacies(clean_argument)
     key_args = key_sentences(clean_argument)
-    tips = recommendations(scores, fallacies, sources)
+    plan = improvement_plan(clean_argument, topic, scores, fallacies, sources)
+    tips = recommendations(scores, fallacies, sources, plan)
+    diagnostics = metric_diagnostics(scores, fallacies, sources)
     counters = counter_guidance(clean_argument, topic, scores)
 
     evidence_note = (
@@ -350,7 +581,8 @@ def analyze_argument(argument: str, reply: str = "") -> dict[str, Any]:
     why = (
         f"Score is computed from {scores['word_count']} words, {scores['evidence_hits']} evidence signals, "
         f"{scores['reasoning_hits']} reasoning connectors, {scores['counter_hits']} counterargument markers, "
-        f"and {len(fallacies)} fallacy flags."
+        f"{scores['impact_hits']} impact markers, and {len(fallacies)} fallacy flags. "
+        f"Weakest area: {plan[0]['area']} at {plan[0]['score']}%."
     )
     change = (
         tips[0]
@@ -367,11 +599,17 @@ def analyze_argument(argument: str, reply: str = "") -> dict[str, Any]:
         "topic": topic,
         "scores": scores,
         "sources": sources,
+        "diagnostics": diagnostics,
         "fallacies": [
             {key: value for key, value in item.items() if key != "penalty"}
             for item in fallacies
         ],
         "recommendations": tips,
+        "improvementPlan": [
+            {key: value for key, value in item.items() if key != "priority"}
+            for item in plan
+        ],
+        "priorityActions": [str(item["action"]) for item in plan[:3]],
         "key_arguments": key_args or ([short_excerpt(clean_argument)] if clean_argument else []),
         "evidence": [
             f"{source['source']}: {source['detail']}"
@@ -385,5 +623,5 @@ def analyze_argument(argument: str, reply: str = "") -> dict[str, Any]:
         "change": change,
         "coachSummary": coach_summary,
         "fallacyNote": fallacy_note,
-        "method": "local_nlp_weighted_scoring_v1",
+        "method": "local_nlp_diagnostic_scoring_v2",
     }

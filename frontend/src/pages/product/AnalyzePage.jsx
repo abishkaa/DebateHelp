@@ -301,6 +301,22 @@ function AnalyzePage({ currentPath = '', onExport, token }) {
                   <strong>Real analysis saved.</strong>
                 </div>
                 <p>{analysis.coachSummary}</p>
+                {analysis.improvementPlan.length ? (
+                  <div className="analysis-improvement-plan" aria-label="Actionable improvement plan">
+                    {analysis.improvementPlan.map((item, index) => (
+                      <div className={`analysis-improvement-card ${scoreTone(item.score)}`} key={`${item.area}-${item.action}`}>
+                        <span>
+                          <strong>{index + 1}. {item.area}</strong>
+                          <b>{item.score}%</b>
+                        </span>
+                        <p>{item.problem}</p>
+                        <small>{item.detected}</small>
+                        <em>{item.action}</em>
+                        {item.example ? <code>{item.example}</code> : null}
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
                 {analysis.recommendations.length ? (
                   <ul>
                     {analysis.recommendations.map((recommendation) => (
@@ -354,6 +370,7 @@ function buildAnalysis(reply, backendAnalysis) {
   const scores = backendAnalysis?.scores || {}
   const hasBackendAnalysis = Boolean(backendAnalysis && Object.keys(scores).length)
   if (hasBackendAnalysis) {
+    const improvementPlan = normalizeImprovementPlan(backendAnalysis.improvementPlan || backendAnalysis.improvement_plan)
     return {
       strength: toScore(scores.strength),
       evidence: toScore(scores.evidence),
@@ -367,7 +384,10 @@ function buildAnalysis(reply, backendAnalysis) {
       coachSummary: backendAnalysis.coachSummary || summarizeReply(reply),
       sources: normalizeSources(backendAnalysis.sources),
       fallacies: normalizeFallacies(backendAnalysis.fallacies),
-      recommendations: Array.isArray(backendAnalysis.recommendations) ? backendAnalysis.recommendations.slice(0, 5) : [],
+      improvementPlan,
+      recommendations: Array.isArray(backendAnalysis.recommendations)
+        ? backendAnalysis.recommendations.slice(0, 5)
+        : improvementPlan.map((item) => item.action).slice(0, 5),
       method: backendAnalysis.method || 'computed_analysis',
       reply,
     }
@@ -386,6 +406,7 @@ function buildAnalysis(reply, backendAnalysis) {
     coachSummary: '',
     sources: [],
     fallacies: [],
+    improvementPlan: [],
     recommendations: [],
     method: '',
     reply,
@@ -415,6 +436,27 @@ function normalizeFallacies(fallacies) {
     detail: fallacy.detail || 'Review this reasoning step before presenting it.',
     excerpt: fallacy.excerpt || '',
   }))
+}
+
+function normalizeImprovementPlan(plan) {
+  if (!Array.isArray(plan)) return []
+  return plan.slice(0, 6).map((item, index) => ({
+    area: item?.area || `Priority ${index + 1}`,
+    score: toScore(item?.score ?? 0),
+    status: item?.status || 'needs work',
+    problem: item?.problem || 'This area needs another pass before debate use.',
+    detected: item?.detected || item?.signal || 'Computed from the submitted argument.',
+    action: item?.action || 'Add a clearer claim, source, warrant, or answer to the strongest objection.',
+    example: item?.example || '',
+  }))
+}
+
+function scoreTone(score) {
+  const value = toScore(score)
+  if (value >= 82) return 'green'
+  if (value >= 65) return 'blue'
+  if (value >= 45) return 'amber'
+  return 'red'
 }
 
 function summarizeReply(reply) {

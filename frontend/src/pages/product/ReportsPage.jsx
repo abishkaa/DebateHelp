@@ -136,6 +136,13 @@ function ReportsPage({ currentPath = '', onExport, token }) {
               <ReportSection icon={<ShieldCheck size={18} />} title="Evidence Assessment" items={report.evidence} />
               <ReportSection icon={<Scale size={18} />} title="Logical Fallacies" items={report.fallacies} />
               <ReportSection icon={<CheckCircle2 size={18} />} title="Counterarguments" items={report.counterarguments} />
+              {Array.isArray(report.improvementPlan) && report.improvementPlan.length ? (
+                <ReportSection
+                  icon={<Target size={18} />}
+                  title="Priority Improvement Plan"
+                  items={report.improvementPlan.slice(0, 4).map(formatPlanItem)}
+                />
+              ) : null}
 
               <section className="report-recommendation">
                 <strong>Final Recommendation</strong>
@@ -176,6 +183,14 @@ function ReportSection({ icon, title, items }) {
       <ul>{items.map((item) => <li key={item}>{item}</li>)}</ul>
     </section>
   )
+}
+
+function formatPlanItem(item, index) {
+  if (!item || typeof item !== 'object') return String(item || `Priority ${index + 1}`)
+  const area = item.area || `Priority ${index + 1}`
+  const score = Number.isFinite(Number(item.score)) ? `${Math.round(Number(item.score))}%` : 'needs work'
+  const action = item.action || item.problem || 'Revise this part before the next debate.'
+  return `${area} (${score}): ${action}`
 }
 
 export default ReportsPage
