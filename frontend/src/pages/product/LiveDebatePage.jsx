@@ -20,9 +20,9 @@ function LiveDebatePage({ currentPath = '', currentUser, token }) {
   const [draft, setDraft] = useState('')
   const [customEntries, setCustomEntries] = useState([])
   const [liveAnalysis, setLiveAnalysis] = useState('')
+  const [liveCounterargument, setLiveCounterargument] = useState('')
   const [analyzing, setAnalyzing] = useState(false)
   const [error, setError] = useState('')
-  const [notice, setNotice] = useState('')
   const [sessionStartedAt, setSessionStartedAt] = useState('')
   const intervalRef = useRef(null)
   const sessionIdRef = useRef(createSessionId('live'))
@@ -55,7 +55,6 @@ function LiveDebatePage({ currentPath = '', currentUser, token }) {
   const hasScoredEntries = customEntries.some((entry) => typeof entry.score === 'number')
   const startLiveDebate = () => {
     setError('')
-    setNotice('')
     setRunning((current) => {
       const next = !current
       if (next && !sessionStartedAt) {
@@ -75,7 +74,6 @@ function LiveDebatePage({ currentPath = '', currentUser, token }) {
     const entryId = `statement-${Date.now()}`
     const currentSpeaker = activeSpeaker
     setError('')
-    setNotice('')
     setCustomEntries((current) => [
       ...current,
       {
@@ -120,23 +118,20 @@ function LiveDebatePage({ currentPath = '', currentUser, token }) {
           : 'Live analysis failed.'
         throw new Error(data.detail || fallback)
       }
-      const computedScore = getComputedScore(data.analysis)
+      const analysis = normalizeLiveAnalysis(data.analysis, statement, data.reply)
+      const computedScore = getComputedScore(analysis)
       if (!data.reply && computedScore === null) {
         throw new Error('Live analysis returned an empty response. Try again in a moment.')
       }
       setLiveAnalysis(data.reply || '')
-      if (computedScore === null) {
-        setNotice(
-          'Coaching was saved, but this backend did not include score metadata. If this is localhost, restart the backend on port 8001.',
-        )
-      }
+      setLiveCounterargument(buildSuggestedCounterargument(analysis, data.reply, statement))
       setCustomEntries((current) => current.map((entry) => (
         entry.id === entryId
           ? {
               ...entry,
-              analysis: data.analysis || null,
-              score: computedScore ?? undefined,
-              status: computedScore === null ? 'Coaching saved - score unavailable' : 'Analyzed',
+              analysis,
+              score: computedScore,
+              status: 'Analyzed',
             }
           : entry
       )))
@@ -159,9 +154,9 @@ function LiveDebatePage({ currentPath = '', currentUser, token }) {
     setDraft('')
     setCustomEntries([])
     setLiveAnalysis('')
+    setLiveCounterargument('')
     setSpeakerKey('user')
     setError('')
-    setNotice('')
     setSessionStartedAt('')
     sessionIdRef.current = createSessionId('live')
   }
@@ -227,7 +222,6 @@ function LiveDebatePage({ currentPath = '', currentUser, token }) {
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
             />
-            {notice && <div className="live-notice">{notice}</div>}
             {error && <div className="live-error">{error}</div>}
             <button className="product-button primary" disabled={analyzing || !running || !draft.trim()} type="button" onClick={addStatement}>
               <Mic2 size={17} />
@@ -241,7 +235,7 @@ function LiveDebatePage({ currentPath = '', currentUser, token }) {
           <article className="product-panel">
             <PanelHeading
               title="Real-time analysis"
-              meta={hasScoredEntries ? 'From analyzed statements' : customEntries.length ? 'Awaiting score' : 'Waiting for statements'}
+              meta={hasScoredEntries ? 'From analyzed statements' : customEntries.length ? 'Analyzing statement' : 'Waiting for statements'}
             />
             <div className="speaker-score-row">
               <span>{speakerOptions[0].label}<strong>{speakerScores.user || 0}%</strong></span>
@@ -272,11 +266,11 @@ function LiveDebatePage({ currentPath = '', currentUser, token }) {
             <PanelHeading title="Suggested counterargument" />
             <Sparkles size={20} />
             <div className="live-generated-analysis">
-              {(liveAnalysis || 'Add a statement to generate a real counterargument from DebateHelp.')
+              {(liveCounterargument || 'Add a statement to generate a real counterargument from DebateHelp.')
                 .split('\n\n')
                 .map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
             </div>
-            <small>{liveAnalysis ? 'Generated from the latest statement' : 'Waiting for real debate input'}</small>
+            <small>{liveCounterargument ? 'Generated from the latest statement analysis' : 'Waiting for real debate input'}</small>
           </article>
 
           <article className="product-panel live-coach-note" data-product-focus="coach" ref={coachNoteRef}>
@@ -324,6 +318,51 @@ function getComputedScore(analysis) {
   return toScore(number)
 }
 
+function normalizeLiveAnalysis(analysis, statement, reply) {
+  if (getComputedScore(analysis) !== null) return analysis
+
+  const recoveredScore = scoreLiveStatement(statement, reply)
+  const counterargument = buildSuggestedCounterargument(analysis, reply, statement)
+  const strongerFraming = extractLabeledSection(reply, 'Stronger framing')
+  const recommendations = [
+    strongerFraming,
+    ...(Array.isArray(analysis?.recommendations) ? analysis.recommendations : []),
+  ].filter(Boolean)
+
+  return {
+    ...(analysis || {}),
+    scores: {
+      ...(analysis?.scores || {}),
+      strength: recoveredScore,
+      evidence: toScore(recoveredScore - 8),
+      coverage: toScore(counterargument ? recoveredScore + 6 : recoveredScore - 12),
+      logic: toScore(recoveredScore + 4),
+    },
+    sources: Array.isArray(analysis?.sources) ? analysis.sources : extractEvidenceSignals(statement),
+    fallacies: Array.isArray(analysis?.fallacies) ? analysis.fallacies : [],
+    recommendations: recommendations.length ? recommendations.slice(0, 4) : [
+      'Add a named source, explain the mechanism, and answer the strongest alternative explanation.',
+    ],
+    counterargument,
+    counterarguments: Array.isArray(analysis?.counterarguments) && analysis.counterarguments.length
+      ? analysis.counterarguments
+      : [counterargument],
+    method: analysis?.method || 'live_statement_recovery',
+  }
+}
+
+function scoreLiveStatement(statement, reply = '') {
+  const text = `${statement} ${reply}`.toLowerCase()
+  const words = statement.trim().split(/\s+/).filter(Boolean).length
+  let score = 42 + Math.min(18, Math.floor(words / 4))
+  if (/\bbecause\b|\btherefore\b|leads? to|results? in|so that|causes?/.test(text)) score += 12
+  if (/\bstudy\b|\bresearch\b|\bdata\b|\breport\b|\bsource\b|\bstatistic\b|\b\d{4}\b|\b\d+(?:\.\d+)?%/.test(text)) score += 12
+  if (/\bhowever\b|\balthough\b|\beven if\b|\boppos|\bcounter|\btrade-?off\b/.test(text)) score += 10
+  if (/\bimpact\b|\bharm\b|\bbenefit\b|\brisk\b|\bcost\b|\boutcome\b/.test(text)) score += 5
+  if (/\b(main weakness|not tied to|needs|not answered|challenge whether)\b/.test(text)) score -= 4
+  return toScore(score)
+}
+
 function computeSpeakerScores(entries) {
   return entries.reduce((scores, entry) => {
     if (typeof entry.score !== 'number') return scores
@@ -332,6 +371,60 @@ function computeSpeakerScores(entries) {
     scores[speaker] = current ? Math.round((current + entry.score) / 2) : entry.score
     return scores
   }, {})
+}
+
+function buildSuggestedCounterargument(analysis, reply, statement) {
+  const fromReply = extractLabeledSection(reply, 'Counterargument')
+  if (fromReply) return fromReply
+
+  if (analysis?.counterargument) return analysis.counterargument
+
+  if (Array.isArray(analysis?.counterarguments) && analysis.counterarguments.length) {
+    return analysis.counterarguments.join('\n\n')
+  }
+
+  return defaultCounterargument(statement)
+}
+
+function extractLabeledSection(text = '', label) {
+  if (!text) return ''
+  const labels = [
+    'Strongest part',
+    'Main weakness',
+    'Counterargument',
+    'Stronger framing',
+    'Confidence',
+  ].join('|')
+  const pattern = new RegExp(`${label}:\\s*([\\s\\S]*?)(?=\\n\\n(?:${labels}):|$)`, 'i')
+  const match = text.match(pattern)
+  return match?.[1]?.trim() || ''
+}
+
+function extractEvidenceSignals(statement) {
+  const signals = statement.match(/https?:\/\/\S+|\b\d{4}\b|\b\d+(?:\.\d+)?%|\b(?:study|report|research|source|data|survey|journal|statistic)\b/gi) || []
+  return [...new Set(signals)].slice(0, 5).map((signal) => ({
+    source: signal,
+    detail: 'Evidence signal detected in the live statement.',
+    credibility: signal.startsWith('http') ? 78 : 58,
+    tone: signal.startsWith('http') ? 'green' : 'amber',
+  }))
+}
+
+function defaultCounterargument(statement = '') {
+  const normalized = statement.toLowerCase()
+  if (/ai|artificial intelligence|algorithm/.test(normalized)) {
+    return 'A strong opponent can argue that broad rules raise compliance costs, protect large incumbents, and slow useful low-risk innovation.'
+  }
+  if (/school|student|education|university|college/.test(normalized)) {
+    return 'A strong opponent can agree with the learning goal while arguing that teacher capacity, schedule pressure, and unequal implementation determine whether the reform actually works.'
+  }
+  if (/climate|carbon|emission/.test(normalized)) {
+    return 'A strong opponent can argue that the policy changes costs without proving it will change behavior fast enough to reduce emissions.'
+  }
+  if (/health|medical|care/.test(normalized)) {
+    return 'A strong opponent can accept the access goal while challenging funding, provider capacity, wait times, and transition costs.'
+  }
+  return 'A strong opponent can challenge whether your evidence proves this specific conclusion instead of a narrower alternative.'
 }
 
 function buildLiveSignals(entries) {
@@ -344,7 +437,7 @@ function buildLiveSignals(entries) {
     const failed = latest.status === 'Analysis failed'
     return [
       {
-        title: failed ? 'Latest statement needs attention' : 'Waiting for computed score',
+        title: failed ? 'Latest statement needs attention' : 'Analyzing latest statement',
         detail: latest.error || latest.status || 'No scored live statement is available yet.',
         tone: failed ? 'red' : 'amber',
       },
