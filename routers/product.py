@@ -5,14 +5,25 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_optional_db
 from models.product import (
     CreateTeamInviteRequest,
+    CreateLiveDebateRoomRequest,
     DashboardResponse,
+    JoinLiveDebateRoomRequest,
+    LiveDebateRoomResponse,
     ReportPublic,
     SaveSharedArgumentRequest,
     SessionHistoryResponse,
     SharedArgumentsResponse,
+    SubmitLiveDebateStatementRequest,
     TeamMembersResponse,
 )
 from services.auth_service import AUTH_COOKIE_NAME, auth_error, get_user_from_token
+from services.live_debate_service import (
+    create_live_room,
+    get_live_room,
+    join_live_room,
+    start_live_room,
+    submit_live_statement,
+)
 from services.product_service import (
     build_dashboard,
     build_session_report,
@@ -115,6 +126,101 @@ async def save_shared_argument_route(
         argument_id=request.id,
     )
     return {"arguments": arguments}
+
+
+@router.post("/live/rooms", response_model=LiveDebateRoomResponse)
+async def create_live_debate_room(
+    request: CreateLiveDebateRoomRequest,
+    current_user=Depends(get_product_user),
+    db: AsyncSession | None = Depends(get_optional_db),
+):
+    try:
+        room = await create_live_room(db, current_user, request.topic)
+        return {"room": room}
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+
+
+@router.post("/live/rooms/join", response_model=LiveDebateRoomResponse)
+async def join_live_debate_room(
+    request: JoinLiveDebateRoomRequest,
+    current_user=Depends(get_product_user),
+    db: AsyncSession | None = Depends(get_optional_db),
+):
+    try:
+        room = await join_live_room(db, current_user, request.room_code)
+        return {"room": room}
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+
+
+@router.get("/live/rooms/{room_code}", response_model=LiveDebateRoomResponse)
+async def live_debate_room(
+    room_code: str,
+    current_user=Depends(get_product_user),
+    db: AsyncSession | None = Depends(get_optional_db),
+):
+    room = await get_live_room(db, current_user, room_code)
+    if room is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Live debate room was not found for this account. Join with the room code first.",
+        )
+    return {"room": room}
+
+
+@router.post("/live/rooms/{room_code}/start", response_model=LiveDebateRoomResponse)
+async def start_live_debate_room(
+    room_code: str,
+    current_user=Depends(get_product_user),
+    db: AsyncSession | None = Depends(get_optional_db),
+):
+    try:
+        room = await start_live_room(db, current_user, room_code)
+        return {"room": room}
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(exc),
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+
+
+@router.post("/live/rooms/{room_code}/statements", response_model=LiveDebateRoomResponse)
+async def submit_live_debate_statement(
+    room_code: str,
+    request: SubmitLiveDebateStatementRequest,
+    current_user=Depends(get_product_user),
+    db: AsyncSession | None = Depends(get_optional_db),
+):
+    try:
+        room = await submit_live_statement(db, current_user, room_code, request.text)
+        return {"room": room}
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(exc),
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
 
 
 @router.get("/reports/{session_id}", response_model=ReportPublic)

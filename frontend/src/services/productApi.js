@@ -50,6 +50,33 @@ export const productApi = {
       body: argument,
     })
   },
+  createLiveRoom(payload) {
+    return request('/product/live/rooms', {
+      method: 'POST',
+      body: payload,
+    })
+  },
+  joinLiveRoom(roomCode) {
+    return request('/product/live/rooms/join', {
+      method: 'POST',
+      body: { room_code: roomCode },
+    })
+  },
+  liveRoom(roomCode) {
+    return request(`/product/live/rooms/${encodeURIComponent(roomCode)}`)
+  },
+  startLiveRoom(roomCode) {
+    return request(`/product/live/rooms/${encodeURIComponent(roomCode)}/start`, {
+      method: 'POST',
+      body: {},
+    })
+  },
+  submitLiveStatement(roomCode, text) {
+    return request(`/product/live/rooms/${encodeURIComponent(roomCode)}/statements`, {
+      method: 'POST',
+      body: { text },
+    })
+  },
   report(sessionId) {
     return request(`/product/reports/${encodeURIComponent(sessionId)}`)
   },
