@@ -22,6 +22,7 @@ function LiveDebatePage({ currentPath = '', currentUser, token }) {
   const [liveAnalysis, setLiveAnalysis] = useState('')
   const [analyzing, setAnalyzing] = useState(false)
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
   const [sessionStartedAt, setSessionStartedAt] = useState('')
   const intervalRef = useRef(null)
   const sessionIdRef = useRef(createSessionId('live'))
@@ -51,8 +52,10 @@ function LiveDebatePage({ currentPath = '', currentUser, token }) {
     [customEntries],
   )
   const speakerScores = useMemo(() => computeSpeakerScores(customEntries), [customEntries])
+  const hasScoredEntries = customEntries.some((entry) => typeof entry.score === 'number')
   const startLiveDebate = () => {
     setError('')
+    setNotice('')
     setRunning((current) => {
       const next = !current
       if (next && !sessionStartedAt) {
@@ -72,6 +75,7 @@ function LiveDebatePage({ currentPath = '', currentUser, token }) {
     const entryId = `statement-${Date.now()}`
     const currentSpeaker = activeSpeaker
     setError('')
+    setNotice('')
     setCustomEntries((current) => [
       ...current,
       {
@@ -117,20 +121,32 @@ function LiveDebatePage({ currentPath = '', currentUser, token }) {
         throw new Error(data.detail || fallback)
       }
       const computedScore = getComputedScore(data.analysis)
-      if (computedScore === null) {
-        throw new Error('Live analysis returned without a computed score. Try again in a moment.')
+      if (!data.reply && computedScore === null) {
+        throw new Error('Live analysis returned an empty response. Try again in a moment.')
       }
       setLiveAnalysis(data.reply || '')
+      if (computedScore === null) {
+        setNotice(
+          'Coaching was saved, but this backend did not include score metadata. If this is localhost, restart the backend on port 8001.',
+        )
+      }
       setCustomEntries((current) => current.map((entry) => (
         entry.id === entryId
-          ? { ...entry, analysis: data.analysis || null, score: computedScore, status: 'Analyzed' }
+          ? {
+              ...entry,
+              analysis: data.analysis || null,
+              score: computedScore ?? undefined,
+              status: computedScore === null ? 'Coaching saved - score unavailable' : 'Analyzed',
+            }
           : entry
       )))
       setSpeakerKey((current) => current === 'user' ? 'opponent' : 'user')
     } catch (error) {
       setError(error.message || 'Analysis unavailable')
       setCustomEntries((current) => current.map((entry) => (
-        entry.id === entryId ? { ...entry, status: error.message || 'Analysis unavailable' } : entry
+        entry.id === entryId
+          ? { ...entry, error: error.message || 'Analysis unavailable', status: 'Analysis failed' }
+          : entry
       )))
     } finally {
       setAnalyzing(false)
@@ -145,6 +161,7 @@ function LiveDebatePage({ currentPath = '', currentUser, token }) {
     setLiveAnalysis('')
     setSpeakerKey('user')
     setError('')
+    setNotice('')
     setSessionStartedAt('')
     sessionIdRef.current = createSessionId('live')
   }
@@ -177,7 +194,9 @@ function LiveDebatePage({ currentPath = '', currentUser, token }) {
                 <div key={entry.id}>
                   <span className={entry.speakerKey === 'user' ? 'speaker-a' : 'speaker-b'}>{entry.speaker}</span>
                   <p>{entry.text}</p>
-                  <small>{typeof entry.score === 'number' ? `${entry.status} - ${entry.score}%` : entry.status}</small>
+                  <small className={entryStatusTone(entry)}>
+                    {typeof entry.score === 'number' ? `${entry.status} - ${entry.score}%` : entry.status}
+                  </small>
                 </div>
               )) : (
                 <div className="panel-empty-state compact">
@@ -208,6 +227,7 @@ function LiveDebatePage({ currentPath = '', currentUser, token }) {
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
             />
+            {notice && <div className="live-notice">{notice}</div>}
             {error && <div className="live-error">{error}</div>}
             <button className="product-button primary" disabled={analyzing || !running || !draft.trim()} type="button" onClick={addStatement}>
               <Mic2 size={17} />
@@ -219,7 +239,10 @@ function LiveDebatePage({ currentPath = '', currentUser, token }) {
 
         <div className="live-analysis-stack">
           <article className="product-panel">
-            <PanelHeading title="Real-time analysis" meta={customEntries.length ? 'From analyzed statements' : 'Waiting for statements'} />
+            <PanelHeading
+              title="Real-time analysis"
+              meta={hasScoredEntries ? 'From analyzed statements' : customEntries.length ? 'Awaiting score' : 'Waiting for statements'}
+            />
             <div className="speaker-score-row">
               <span>{speakerOptions[0].label}<strong>{speakerScores.user || 0}%</strong></span>
               <progress aria-label={`${speakerOptions[0].label} score`} className="score-progress" max="100" value={speakerScores.user || 0} />
@@ -313,15 +336,28 @@ function computeSpeakerScores(entries) {
 
 function buildLiveSignals(entries) {
   const latest = entries.at(-1)
+  const latestScored = [...entries]
+    .reverse()
+    .find((entry) => typeof entry.score === 'number' && entry.status === 'Analyzed')
   if (!latest) return []
-  const analysis = latest.analysis || {}
+  if (!latestScored) {
+    const failed = latest.status === 'Analysis failed'
+    return [
+      {
+        title: failed ? 'Latest statement needs attention' : 'Waiting for computed score',
+        detail: latest.error || latest.status || 'No scored live statement is available yet.',
+        tone: failed ? 'red' : 'amber',
+      },
+    ]
+  }
+  const analysis = latestScored.analysis || {}
   const sources = Array.isArray(analysis.sources) ? analysis.sources : []
   const fallacies = Array.isArray(analysis.fallacies) ? analysis.fallacies : []
   const recommendations = Array.isArray(analysis.recommendations) ? analysis.recommendations : []
   return [
     {
       title: 'Latest statement analyzed',
-      detail: `${latest.speaker} scored ${latest.score || 0}% on the newest saved statement${analysis.method ? ` using ${analysis.method}` : ''}.`,
+      detail: `${latestScored.speaker} scored ${latestScored.score}% on the newest saved statement${analysis.method ? ` using ${analysis.method}` : ''}.`,
       tone: 'green',
     },
     {
@@ -344,6 +380,12 @@ function buildLiveSignals(entries) {
       tone: recommendations.length ? 'amber' : 'green',
     },
   ]
+}
+
+function entryStatusTone(entry) {
+  if (entry.status === 'Analyzed') return 'success'
+  if (entry.status === 'Analysis failed') return 'danger'
+  return 'warning'
 }
 
 function summarizeLiveAnalysis(reply) {

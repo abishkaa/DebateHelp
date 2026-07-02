@@ -12077,14 +12077,36 @@ body,
   opacity: 0.64 !important;
 }
 
-.live-error {
+.live-error,
+.live-notice {
   padding: 10px 12px !important;
-  border: 1px solid rgba(255, 83, 112, 0.45) !important;
   border-radius: 10px !important;
-  background: rgba(255, 83, 112, 0.08) !important;
-  color: var(--red) !important;
   font-size: 0.76rem !important;
   font-weight: 900 !important;
+}
+
+.live-error {
+  border: 1px solid rgba(255, 83, 112, 0.45) !important;
+  background: rgba(255, 83, 112, 0.08) !important;
+  color: var(--red) !important;
+}
+
+.live-notice {
+  border: 1px solid rgba(223, 255, 78, 0.42) !important;
+  background: rgba(223, 255, 78, 0.08) !important;
+  color: var(--amber) !important;
+}
+
+.live-statements small.success {
+  color: var(--green) !important;
+}
+
+.live-statements small.warning {
+  color: var(--amber) !important;
+}
+
+.live-statements small.danger {
+  color: var(--red) !important;
 }
 
 .live-session-meta {
