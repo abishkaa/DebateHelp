@@ -1,5 +1,131 @@
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
+import { spawn } from 'node:child_process'
+import { existsSync } from 'node:fs'
+import net from 'node:net'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const projectRoot = path.resolve(__dirname, '..')
+const backendPort = 8001
+
+function isLocalBackendTarget(target) {
+  return /^https?:\/\/(?:localhost|127\.0\.0\.1):8001\/?$/.test(target || '')
+}
+
+function canConnectToPort(port) {
+  return new Promise((resolve) => {
+    const socket = net.createConnection({ host: '127.0.0.1', port })
+    socket.once('connect', () => {
+      socket.destroy()
+      resolve(true)
+    })
+    socket.once('error', () => {
+      socket.destroy()
+      resolve(false)
+    })
+    socket.setTimeout(450, () => {
+      socket.destroy()
+      resolve(false)
+    })
+  })
+}
+
+async function waitForPort(port, timeoutMs = 20_000) {
+  const startedAt = Date.now()
+  while (Date.now() - startedAt < timeoutMs) {
+    if (await canConnectToPort(port)) return true
+    await new Promise((resolve) => setTimeout(resolve, 250))
+  }
+  return false
+}
+
+function backendPython() {
+  const candidates = process.platform === 'win32'
+    ? [
+        path.join(projectRoot, '.venv', 'Scripts', 'python.exe'),
+        'python',
+        'py',
+      ]
+    : [
+        path.join(projectRoot, '.venv', 'bin', 'python'),
+        'python3',
+        'python',
+      ]
+
+  return candidates.find((candidate) => candidate.includes(path.sep) ? existsSync(candidate) : true)
+}
+
+function stopBackend(child) {
+  if (!child?.pid || child.killed) return
+  if (process.platform === 'win32') {
+    spawn('taskkill.exe', ['/PID', String(child.pid), '/T', '/F'], {
+      stdio: 'ignore',
+      windowsHide: true,
+    })
+    return
+  }
+  child.kill('SIGTERM')
+}
+
+function localBackendPlugin(proxyTarget) {
+  return {
+    name: 'debatehelp-local-backend',
+    apply: 'serve',
+    async configureServer(server) {
+      if (!isLocalBackendTarget(proxyTarget)) return
+      if (process.env.VITE_AUTO_START_BACKEND === 'false') return
+      if (await canConnectToPort(backendPort)) {
+        server.config.logger.info('DebateHelp backend already running on http://localhost:8001')
+        return
+      }
+
+      const python = backendPython()
+      const child = spawn(
+        python,
+        ['-m', 'uvicorn', 'main:app', '--host', '127.0.0.1', '--port', String(backendPort)],
+        {
+          cwd: projectRoot,
+          env: {
+            ...process.env,
+            FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:5173',
+            CORS_ORIGINS: process.env.CORS_ORIGINS || 'http://localhost:5173,http://127.0.0.1:5173',
+          },
+          stdio: ['ignore', 'pipe', 'pipe'],
+          windowsHide: true,
+        },
+      )
+
+      server.config.logger.info('Starting DebateHelp backend on http://localhost:8001')
+
+      child.stdout.on('data', (chunk) => {
+        server.config.logger.info(`[backend] ${chunk.toString().trimEnd()}`)
+      })
+      child.stderr.on('data', (chunk) => {
+        server.config.logger.warn(`[backend] ${chunk.toString().trimEnd()}`)
+      })
+      child.on('exit', (code) => {
+        if (code !== 0 && code !== null) {
+          server.config.logger.error(`DebateHelp backend exited with code ${code}.`)
+        }
+      })
+
+      server.httpServer?.once('close', () => stopBackend(child))
+      process.once('SIGINT', () => stopBackend(child))
+      process.once('SIGTERM', () => stopBackend(child))
+      process.once('exit', () => stopBackend(child))
+
+      if (await waitForPort(backendPort)) {
+        server.config.logger.info('DebateHelp backend ready on http://localhost:8001')
+      } else {
+        server.config.logger.warn(
+          'DebateHelp backend is still starting; /api requests may fail until http://localhost:8001 is ready.',
+        )
+      }
+    },
+  }
+}
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
@@ -13,6 +139,7 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [
       react(),
+      localBackendPlugin(proxyTarget),
       {
         name: 'debatehelp-security-policy',
         transformIndexHtml(html) {

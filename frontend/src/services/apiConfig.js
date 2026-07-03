@@ -10,7 +10,7 @@ export function networkErrorMessage(service = 'server') {
   }
 
   if (!import.meta.env.PROD && API_BASE_URL === '/api') {
-    return 'Cannot reach the DebateHelp backend. Start the backend server on http://localhost:8001, then try again.'
+    return 'Cannot reach the DebateHelp backend. Restart the frontend dev server; it now auto-starts FastAPI on http://localhost:8001.'
   }
 
   return `Cannot reach the DebateHelp ${service}. Please refresh and try again.`
