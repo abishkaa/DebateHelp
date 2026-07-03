@@ -530,6 +530,16 @@ async def find_or_create_oauth_user(
         await db.rollback()
         existing = await find_user_by_email(db, email)
         if existing:
+            if isinstance(existing, dict):
+                existing["is_verified"] = True
+                if not existing.get("full_name") and full_name:
+                    existing["full_name"] = full_name
+                if not existing.get("profile_image_url") and profile_image_url:
+                    existing["profile_image_url"] = profile_image_url
+                if existing.get("auth_provider") == "email":
+                    existing["auth_provider"] = provider
+                return existing
+
             existing.is_verified = True
             if not existing.full_name and full_name:
                 existing.full_name = full_name
