@@ -94,6 +94,21 @@ def clamp(value: float, minimum: int = 0, maximum: int = 100) -> int:
     return max(minimum, min(maximum, round(value)))
 
 
+def score_ceiling(word_count: int, signal_count: int) -> int:
+    """Cap scores when the submission is too short to carry a real debate burden."""
+    if word_count <= 1:
+        return 6
+    if word_count < 5:
+        return min(14, 8 + signal_count * 2)
+    if word_count < 12:
+        return min(42, 20 + word_count + signal_count * 4)
+    if word_count < 25:
+        return min(62, 34 + word_count + signal_count * 4)
+    if word_count < 60:
+        return min(84, 52 + round(word_count * 0.45) + signal_count * 3)
+    return 100
+
+
 def words(text: str) -> list[str]:
     return [match.group(0).lower() for match in WORD_RE.finditer(text)]
 
@@ -231,14 +246,72 @@ def score_argument(text: str) -> dict[str, Any]:
     qualifier_hits = len(QUALIFIER_RE.findall(text))
     fallacies = detect_fallacies(text)
     fallacy_penalty = sum(int(item["penalty"]) for item in fallacies)
+    source_signals = extract_sources(text)
+    exact_source_count = sum(
+        1
+        for source in source_signals
+        if str(source.get("tone")) == "green"
+        or str(source.get("source", "")).startswith(("http://", "https://"))
+    )
+    signal_count = (
+        claim_hits
+        + evidence_hits
+        + reasoning_hits
+        + counter_hits
+        + impact_hits
+        + qualifier_hits
+        + exact_source_count
+    )
+    ceiling = score_ceiling(word_count, signal_count)
 
     length_score = clamp((word_count / 140) * 100)
-    claim_clarity = clamp(35 + claim_hits * 20 + min(20, word_count / 8) - max(0, avg_sentence_length - 32))
-    evidence_quality = clamp(24 + evidence_hits * 14 + min(16, word_count / 30) + (8 if any(source["tone"] == "green" for source in extract_sources(text)) else 0))
-    reasoning_depth = clamp(30 + reasoning_hits * 14 + impact_hits * 6 + min(12, lexical_diversity * 18))
-    counter_coverage = clamp(20 + counter_hits * 22 + qualifier_hits * 4)
-    logical_consistency = clamp(82 + qualifier_hits * 2 - fallacy_penalty - max(0, avg_sentence_length - 38))
-    readability = clamp(100 - abs(grade - 10) * 5 - max(0, avg_sentence_length - 34))
+    claim_clarity = min(
+        ceiling,
+        clamp(
+            claim_hits * 22
+            + impact_hits * 4
+            + min(28, word_count * 1.2)
+            + (10 if word_count >= 18 and sentence_count >= 2 else 0)
+            - max(0, avg_sentence_length - 32),
+        ),
+    )
+    evidence_quality = min(
+        ceiling,
+        0 if not source_signals else clamp(
+            evidence_hits * 12
+            + exact_source_count * 24
+            + min(16, word_count / 18)
+            + (8 if any(source["tone"] == "green" for source in source_signals) else 0)
+        ),
+    )
+    reasoning_depth = min(
+        ceiling,
+        clamp(
+            reasoning_hits * 18
+            + impact_hits * 9
+            + claim_hits * 5
+            + min(18, max(0, word_count - 4) * 0.6)
+            + min(8, lexical_diversity * 10)
+        ),
+    )
+    counter_coverage = min(
+        ceiling,
+        clamp(counter_hits * 25 + qualifier_hits * 6 + (8 if counter_hits and word_count >= 40 else 0)),
+    )
+    readability = 0 if word_count < 6 else clamp(100 - abs(grade - 10) * 5 - max(0, avg_sentence_length - 34))
+    logical_consistency = min(
+        ceiling,
+        clamp(
+            min(24, max(0, word_count - 3) * 1.2)
+            + claim_hits * 13
+            + reasoning_hits * 15
+            + impact_hits * 5
+            + qualifier_hits * 4
+            + (10 if 6 <= avg_sentence_length <= 28 and word_count >= 8 else 0)
+            + (6 if evidence_hits else 0)
+            - fallacy_penalty
+        ),
+    )
     strength = clamp(
         claim_clarity * 0.22
         + evidence_quality * 0.22
@@ -256,6 +329,8 @@ def score_argument(text: str) -> dict[str, Any]:
         "coverage": counter_coverage,
         "logic": logical_consistency,
         "readability": readability,
+        "score_ceiling": ceiling,
+        "low_information": word_count < 6 or (word_count < 12 and signal_count < 2),
         "word_count": word_count,
         "sentence_count": len(sentence_list),
         "avg_sentence_length": round(avg_sentence_length, 1),
@@ -566,18 +641,27 @@ def analyze_argument(argument: str, reply: str = "") -> dict[str, Any]:
     tips = recommendations(scores, fallacies, sources, plan)
     diagnostics = metric_diagnostics(scores, fallacies, sources)
     counters = counter_guidance(clean_argument, topic, scores)
+    low_information = bool(scores.get("low_information"))
+    if low_information:
+        counters = [
+            "No meaningful counterargument can be generated from this submission yet.",
+            "Write a complete claim first, then DebateHelp can test the strongest opposing response.",
+        ]
 
     evidence_note = (
         "No concrete citation signals were found. Add a named study, report, dataset, statistic, case, or URL."
         if not sources
         else f"{len(sources)} evidence signal{'s' if len(sources) != 1 else ''} found; strongest signal credibility is {max(source['credibility'] for source in sources)}%."
     )
-    fallacy_note = (
-        f"Flagged {len(fallacies)} reasoning risk{'s' if len(fallacies) != 1 else ''}: "
-        + ", ".join(item["name"] for item in fallacies[:3])
-        if fallacies
-        else "No major fallacy pattern was detected by the local analyzer."
-    )
+    if low_information:
+        fallacy_note = "Too little argumentative content was provided to evaluate fallacy risk reliably."
+    elif fallacies:
+        fallacy_note = (
+            f"Flagged {len(fallacies)} reasoning risk{'s' if len(fallacies) != 1 else ''}: "
+            + ", ".join(item["name"] for item in fallacies[:3])
+        )
+    else:
+        fallacy_note = "No major fallacy pattern was detected by the local analyzer."
     why = (
         f"Score is computed from {scores['word_count']} words, {scores['evidence_hits']} evidence signals, "
         f"{scores['reasoning_hits']} reasoning connectors, {scores['counter_hits']} counterargument markers, "
@@ -589,8 +673,14 @@ def analyze_argument(argument: str, reply: str = "") -> dict[str, Any]:
         if tips
         else "A stronger source or clearer counterargument could still change the score."
     )
+    low_information_answer = (
+        "This submission is too short to evaluate as a debate argument. Add a clear claim, a because-reason, "
+        "one piece of evidence, and at least one answer to the strongest objection before trusting the percentages."
+    )
     coach_summary = (
-        short_excerpt(reply, 240)
+        low_information_answer
+        if low_information
+        else short_excerpt(reply, 240)
         if reply
         else f"{topic}: current argument strength is {scores['strength']}% with evidence at {scores['evidence']}%."
     )
@@ -616,12 +706,13 @@ def analyze_argument(argument: str, reply: str = "") -> dict[str, Any]:
             for source in sources
         ] or [evidence_note],
         "counterarguments": counters,
-        "answer": reply or "Run analysis to generate coaching text.",
+        "answer": low_information_answer if low_information else reply or "Run analysis to generate coaching text.",
         "why": why,
         "evidenceNote": evidence_note,
         "counterargument": " ".join(counters),
         "change": change,
         "coachSummary": coach_summary,
         "fallacyNote": fallacy_note,
-        "method": "local_nlp_diagnostic_scoring_v2",
+        "lowInformation": low_information,
+        "method": "local_nlp_diagnostic_scoring_v3",
     }

@@ -33,13 +33,17 @@ async def chat(
     user = await get_user_from_token(db, token)
     user_id = user["id"] if isinstance(user, dict) else user.id
     storage_session_id = f"{user_id}:{payload.session_id}"
-    response_text = await process_debate_message(
-        db=db,
-        message=payload.message,
-        session_id=storage_session_id,
-        difficulty=payload.difficulty,
-    )
-    analysis = analyze_argument(payload.message, response_text)
+    analysis = analyze_argument(payload.message)
+    if analysis.get("lowInformation"):
+        response_text = str(analysis["answer"])
+    else:
+        response_text = await process_debate_message(
+            db=db,
+            message=payload.message,
+            session_id=storage_session_id,
+            difficulty=payload.difficulty,
+        )
+        analysis = analyze_argument(payload.message, response_text)
     try:
         await record_debate_session(
             db=db,

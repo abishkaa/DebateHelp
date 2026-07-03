@@ -287,7 +287,7 @@ function AnalyzePage({ currentPath = '', onExport, token }) {
             ) : reply ? (
               <div className="analysis-risk-list clean">
                 <strong>Reasoning risks</strong>
-                <span>No major fallacy pattern was detected by the local analyzer.</span>
+                <span>{analysis.fallacyNote}</span>
               </div>
             ) : null}
           </article>
@@ -384,6 +384,7 @@ function buildAnalysis(reply, backendAnalysis) {
       coachSummary: backendAnalysis.coachSummary || summarizeReply(reply),
       sources: normalizeSources(backendAnalysis.sources),
       fallacies: normalizeFallacies(backendAnalysis.fallacies),
+      fallacyNote: backendAnalysis.fallacyNote || 'No major fallacy pattern was detected by the local analyzer.',
       improvementPlan,
       recommendations: Array.isArray(backendAnalysis.recommendations)
         ? backendAnalysis.recommendations.slice(0, 5)
@@ -406,6 +407,7 @@ function buildAnalysis(reply, backendAnalysis) {
     coachSummary: '',
     sources: [],
     fallacies: [],
+    fallacyNote: 'No backend analysis has been run yet.',
     improvementPlan: [],
     recommendations: [],
     method: '',
