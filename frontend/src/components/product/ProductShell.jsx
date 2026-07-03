@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Activity,
-  BarChart3,
-  Command,
   FileText,
   History,
   LayoutDashboard,
@@ -17,6 +15,7 @@ import {
   X,
   Zap,
 } from 'lucide-react'
+import BrandLogo from '../BrandLogo.jsx'
 import { productApi } from '../../services/productApi.js'
 
 const NAV_ITEMS = [
@@ -139,11 +138,7 @@ function ProductShell({
         </button>
 
         <button className="product-brand" type="button" onClick={() => navigateTo('/app')}>
-          <span className="product-brand-mark"><Command size={20} /></span>
-          <span>
-            <strong>DebateHelp</strong>
-            <small>Debate workspace</small>
-          </span>
+          <BrandLogo className="product-brand-logo" size="sm" />
         </button>
 
         <div className="product-operator-card">

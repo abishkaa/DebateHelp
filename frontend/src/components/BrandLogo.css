@@ -1,0 +1,38 @@
+.brand-logo {
+  display: inline-grid;
+  place-items: center;
+  width: 4rem;
+  height: 4rem;
+  overflow: hidden;
+  line-height: 0;
+  text-decoration: none;
+  text-shadow: none !important;
+}
+
+.brand-logo--sm {
+  width: 3rem;
+  height: 3rem;
+}
+
+.brand-logo--md {
+  width: 4rem;
+  height: 4rem;
+}
+
+.brand-logo__image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.product-brand > .brand-logo.product-brand-logo {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 720px) {
+  .brand-logo--md {
+    width: 3.25rem;
+    height: 3.25rem;
+  }
+}

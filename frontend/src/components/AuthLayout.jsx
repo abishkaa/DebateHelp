@@ -1,3 +1,5 @@
+import BrandLogo from './BrandLogo.jsx'
+
 const AUTH_VARIANTS = {
   login: {
     image: 'https://lh3.googleusercontent.com/aida/AP1WRLtg2pbKy7cUKo8oUj08Bqbp2Ownl-SmfGaw_wK07wdtEMRtgyEHqjzS3s9h1xCHgg3izQ8oWJvItF0YDPFYdI_uSpp_E-6PxzjNdqMtBXjsrWxsVa_VAVW27TXN3Jw429td_VKaznwBAHWUghsA5eOTiMOkR6mEtKf8w-YZ3fdoO5Whk7FmMGQZiUt9wROomeujJh9f7ADsyMiwOA1gjBNCEGz5DZEZg78P11VlHh1BB1GgDGjysYnINpA',
@@ -28,11 +30,7 @@ function AuthLayout({ children, footer, subtitle, title, variant = 'login' }) {
         <div className="auth-hero-image" style={{ backgroundImage: `url("${config.image}")` }} />
         <div className="auth-hero-shade" />
         <div className="auth-brand">
-          <div className="brand-mark">DH</div>
-          <div>
-            <p>DebateHelp</p>
-            <span>Debate strategy terminal</span>
-          </div>
+          <BrandLogo />
         </div>
         <div className="auth-hero-copy">
           <p className="eyebrow">AUTHENTICATION_REQUIRED</p>

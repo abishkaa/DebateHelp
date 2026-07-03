@@ -1,3 +1,5 @@
+import BrandLogo from '../components/BrandLogo.jsx'
+
 const IMAGES = {
   hero: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 900 900'%3E%3Cdefs%3E%3CradialGradient id='pink' cx='34%25' cy='28%25' r='64%25'%3E%3Cstop offset='0' stop-color='%23ffe3ff' stop-opacity='.95'/%3E%3Cstop offset='.22' stop-color='%23ff5de9' stop-opacity='.88'/%3E%3Cstop offset='.68' stop-color='%239b2cff' stop-opacity='.35'/%3E%3Cstop offset='1' stop-color='%23020a12' stop-opacity='0'/%3E%3C/radialGradient%3E%3CradialGradient id='cyan' cx='32%25' cy='24%25' r='72%25'%3E%3Cstop offset='0' stop-color='%23d9ffff' stop-opacity='.9'/%3E%3Cstop offset='.28' stop-color='%2300f6ff' stop-opacity='.76'/%3E%3Cstop offset='.76' stop-color='%2304ddaa' stop-opacity='.28'/%3E%3Cstop offset='1' stop-color='%23020a12' stop-opacity='0'/%3E%3C/radialGradient%3E%3CradialGradient id='lime' cx='36%25' cy='24%25' r='70%25'%3E%3Cstop offset='0' stop-color='%23f3ffd9' stop-opacity='.9'/%3E%3Cstop offset='.34' stop-color='%23aaff34' stop-opacity='.68'/%3E%3Cstop offset='.82' stop-color='%2302f5a5' stop-opacity='.22'/%3E%3Cstop offset='1' stop-color='%23020a12' stop-opacity='0'/%3E%3C/radialGradient%3E%3Cfilter id='soft'%3E%3CfeGaussianBlur stdDeviation='18'/%3E%3C/filter%3E%3Cfilter id='shadow'%3E%3CfeDropShadow dx='24' dy='26' stdDeviation='18' flood-color='%23000000' flood-opacity='.45'/%3E%3C/filter%3E%3C/defs%3E%3Crect width='900' height='900' fill='none'/%3E%3Cg filter='url(%23shadow)'%3E%3Ccircle cx='300' cy='610' r='230' fill='url(%23pink)'/%3E%3Cellipse cx='604' cy='520' rx='206' ry='244' fill='url(%23cyan)' transform='rotate(-18 604 520)'/%3E%3Cellipse cx='548' cy='236' rx='86' ry='232' fill='url(%23lime)' transform='rotate(20 548 236)'/%3E%3Ccircle cx='726' cy='246' r='96' fill='url(%23pink)' opacity='.52'/%3E%3C/g%3E%3Cg filter='url(%23soft)' opacity='.55'%3E%3Ccircle cx='140' cy='240' r='56' fill='%2300f6ff'/%3E%3Ccircle cx='806' cy='642' r='78' fill='%23ff5de9'/%3E%3Ccircle cx='438' cy='150' r='32' fill='%23aaff34'/%3E%3C/g%3E%3C/svg%3E",
 }
@@ -56,7 +58,7 @@ function LandingPage({ navigateTo }) {
 
       <header className="du-topbar">
         <button className="du-brand" type="button" onClick={() => navigateTo('/')}>
-          DEBATEHELP_OS
+          <BrandLogo />
         </button>
         <nav aria-label="Primary navigation">
           <a href="#intel">Analysis</a>
@@ -171,7 +173,7 @@ function LandingPage({ navigateTo }) {
       </div>
 
       <footer className="du-footer">
-        <strong>DEBATEHELP</strong>
+        <BrandLogo size="sm" />
         <span>Debate workspace active © 2026</span>
       </footer>
     </div>

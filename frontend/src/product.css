@@ -12628,3 +12628,39 @@ body,
     grid-template-columns: 1fr !important;
   }
 }
+
+/* Exact Google Stitch logo treatment:
+   projects/2995590960522929501/screens/ead431c614b64d0390837e6b46f76919 */
+.brand-logo,
+.auth-brand .brand-logo,
+.du-brand .brand-logo,
+.du-footer .brand-logo,
+.product-brand .brand-logo {
+  display: inline-grid !important;
+  place-items: center !important;
+  overflow: hidden !important;
+  line-height: 0 !important;
+  text-decoration: none !important;
+  text-shadow: none !important;
+}
+
+.brand-logo--md,
+.auth-brand .brand-logo,
+.du-brand .brand-logo {
+  width: 4rem !important;
+  height: 4rem !important;
+}
+
+.brand-logo--sm,
+.du-footer .brand-logo,
+.product-brand .brand-logo {
+  width: 3rem !important;
+  height: 3rem !important;
+}
+
+.brand-logo__image {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+}
