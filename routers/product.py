@@ -171,7 +171,16 @@ async def live_debate_room(
     current_user=Depends(get_product_user),
     db: AsyncSession | None = Depends(get_optional_db),
 ):
-    room = await get_live_room(db, current_user, room_code)
+    from models.validation import clean_room_code
+
+    try:
+        safe_room_code = clean_room_code(room_code)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+    room = await get_live_room(db, current_user, safe_room_code)
     if room is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -186,17 +195,19 @@ async def start_live_debate_room(
     current_user=Depends(get_product_user),
     db: AsyncSession | None = Depends(get_optional_db),
 ):
+    from models.validation import clean_room_code
+
     try:
-        room = await start_live_room(db, current_user, room_code)
+        room = await start_live_room(db, current_user, clean_room_code(room_code))
         return {"room": room}
-    except PermissionError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=str(exc),
-        ) from exc
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
             detail=str(exc),
         ) from exc
 
@@ -208,8 +219,10 @@ async def submit_live_debate_statement(
     current_user=Depends(get_product_user),
     db: AsyncSession | None = Depends(get_optional_db),
 ):
+    from models.validation import clean_room_code
+
     try:
-        room = await submit_live_statement(db, current_user, room_code, request.text)
+        room = await submit_live_statement(db, current_user, clean_room_code(room_code), request.text)
         return {"room": room}
     except PermissionError as exc:
         raise HTTPException(

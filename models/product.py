@@ -6,7 +6,7 @@ from sqlalchemy import DateTime, Index, Integer, JSON, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from database import Base
-from models.validation import SecureRequestModel, clean_email, clean_text
+from models.validation import SecureRequestModel, clean_email, clean_room_code, clean_text
 
 
 class DebateSession(Base):
@@ -253,10 +253,7 @@ class JoinLiveDebateRoomRequest(SecureRequestModel):
     @field_validator("room_code")
     @classmethod
     def valid_room_code(cls, value: str) -> str:
-        code = clean_text(value).upper().replace(" ", "").replace("-", "")
-        if not code.isalnum():
-            raise ValueError("Room code can only contain letters and numbers")
-        return code
+        return clean_room_code(value)
 
 
 class SubmitLiveDebateStatementRequest(SecureRequestModel):

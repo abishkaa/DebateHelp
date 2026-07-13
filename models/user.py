@@ -10,6 +10,7 @@ from models.validation import (
     SecureRequestModel,
     clean_email,
     clean_http_url,
+    clean_new_password,
     clean_optional_text,
     clean_password,
     clean_profile_image_url,
@@ -85,7 +86,7 @@ class SignupRequest(SecureRequestModel):
     @field_validator("password", "confirm_password")
     @classmethod
     def valid_password(cls, value: str) -> str:
-        return clean_password(value)
+        return clean_new_password(value)
 
     @field_validator("email")
     @classmethod
@@ -144,7 +145,7 @@ class ResetPasswordRequest(SecureRequestModel):
     @field_validator("password", "confirm_password")
     @classmethod
     def valid_password(cls, value: str) -> str:
-        return clean_password(value)
+        return clean_new_password(value)
 
     @field_validator("confirm_password")
     @classmethod

@@ -32,6 +32,7 @@ from services.auth_service import (
     revoke_token,
     serialize_user,
     set_auth_cookie,
+    set_csrf_cookie,
     update_profile,
     verify_email_token,
 )
@@ -119,7 +120,15 @@ async def logout(
 
 
 @router.get("/me", response_model=UserPublic)
-async def me(current_user=Depends(get_current_user)):
+async def me(
+    request: Request,
+    response: Response,
+    current_user=Depends(get_current_user),
+):
+    from security import CSRF_COOKIE_NAME
+
+    if CSRF_COOKIE_NAME not in request.cookies:
+        set_csrf_cookie(response)
     return serialize_user(current_user)
 
 

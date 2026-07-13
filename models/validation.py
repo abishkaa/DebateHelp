@@ -1,3 +1,5 @@
+import base64
+import binascii
 import re
 import unicodedata
 from urllib.parse import urlsplit
@@ -6,6 +8,7 @@ from pydantic import BaseModel, ConfigDict
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 SESSION_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]*$")
+ROOM_CODE_RE = re.compile(r"^[A-Z0-9]{4,16}$")
 TOKEN_RE = re.compile(r"^[A-Za-z0-9._~-]+$")
 PROFILE_IMAGE_DATA_URL_RE = re.compile(r"^data:image/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$")
 MAX_PROFILE_IMAGE_DATA_URL_LENGTH = 80_000
@@ -66,6 +69,18 @@ def clean_password(value: str) -> str:
     return value
 
 
+def clean_new_password(value: str) -> str:
+    password = clean_password(value)
+    lowered = password.lower()
+    if len(password) < 8:
+        raise ValueError("Use at least 8 characters")
+    if not re.search(r"[A-Za-z]", password) or not re.search(r"\d", password):
+        raise ValueError("Use at least one letter and one number")
+    if lowered in {"password", "password1", "password123", "debatehelp", "letmein123"}:
+        raise ValueError("Choose a less common password")
+    return password
+
+
 def clean_email(value: str) -> str:
     email = clean_text(value).casefold()
     if not EMAIL_RE.fullmatch(email):
@@ -87,6 +102,13 @@ def clean_session_id(value: str) -> str:
     if not SESSION_ID_RE.fullmatch(session_id):
         raise ValueError("Session ID contains unsupported characters")
     return session_id
+
+
+def clean_room_code(value: str) -> str:
+    room_code = clean_text(value).upper().replace(" ", "").replace("-", "")
+    if not ROOM_CODE_RE.fullmatch(room_code):
+        raise ValueError("Room code can only contain 4-16 letters and numbers")
+    return room_code
 
 
 def clean_http_url(value: str | None) -> str | None:
@@ -114,5 +136,18 @@ def clean_profile_image_url(value: str | None) -> str | None:
             raise ValueError("Profile image is too large")
         if not PROFILE_IMAGE_DATA_URL_RE.fullmatch(image_url):
             raise ValueError("Profile image must be a JPG, PNG, or WebP image")
-        return image_url
+        media_type, encoded = image_url.split(",", 1)
+        try:
+            image_bytes = base64.b64decode(encoded, validate=True)
+        except (binascii.Error, ValueError) as exc:
+            raise ValueError("Profile image is malformed") from exc
+        if len(image_bytes) > 48_000:
+            raise ValueError("Profile image is too large")
+        if media_type == "data:image/jpeg;base64" and image_bytes.startswith(b"\xff\xd8\xff"):
+            return image_url
+        if media_type == "data:image/png;base64" and image_bytes.startswith(b"\x89PNG\r\n\x1a\n"):
+            return image_url
+        if media_type == "data:image/webp;base64" and image_bytes.startswith(b"RIFF") and image_bytes[8:12] == b"WEBP":
+            return image_url
+        raise ValueError("Profile image content does not match its declared type")
     return clean_http_url(image_url)

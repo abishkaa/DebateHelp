@@ -1,4 +1,6 @@
 import asyncio
+import hashlib
+import hmac
 import ipaddress
 import math
 import os
@@ -51,7 +53,18 @@ try:
 except ValueError as exc:
     raise RuntimeError("TRUSTED_PROXY_IPS contains an invalid IP or CIDR.") from exc
 AUTH_COOKIE_NAME = os.getenv("AUTH_COOKIE_NAME", "debatehelp_session")
+CSRF_COOKIE_NAME = os.getenv("CSRF_COOKIE_NAME", "debatehelp_csrf")
+CSRF_HEADER_NAME = os.getenv("CSRF_HEADER_NAME", "x-csrf-token").lower()
 REDIS_URL = os.getenv("REDIS_URL", "").strip()
+
+ANALYSIS_RATE_LIMIT = _positive_int("ANALYSIS_RATE_LIMIT_MAX_REQUESTS", 30)
+ANALYSIS_RATE_WINDOW = _positive_int("ANALYSIS_RATE_LIMIT_WINDOW_SECONDS", 900)
+WRITE_RATE_LIMIT = _positive_int("WRITE_RATE_LIMIT_MAX_REQUESTS", 120)
+WRITE_RATE_WINDOW = _positive_int("WRITE_RATE_LIMIT_WINDOW_SECONDS", 900)
+LIVE_RATE_LIMIT = _positive_int("LIVE_RATE_LIMIT_MAX_REQUESTS", 60)
+LIVE_RATE_WINDOW = _positive_int("LIVE_RATE_LIMIT_WINDOW_SECONDS", 900)
+TEAM_RATE_LIMIT = _positive_int("TEAM_RATE_LIMIT_MAX_REQUESTS", 30)
+TEAM_RATE_WINDOW = _positive_int("TEAM_RATE_LIMIT_WINDOW_SECONDS", 3600)
 
 SENSITIVE_AUTH_PATHS = {
     "/auth/signup",
@@ -63,6 +76,36 @@ SENSITIVE_AUTH_PATHS = {
 SENSITIVE_AUTH_PREFIXES = (
     "/auth/oauth/",
 )
+UNSAFE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+
+
+def _csrf_secret() -> str:
+    return os.getenv("CSRF_SECRET", "").strip() or os.getenv("JWT_SECRET", "").strip()
+
+
+def create_csrf_token() -> str:
+    nonce = secrets.token_urlsafe(32)
+    signature = hmac.new(
+        _csrf_secret().encode("utf-8"),
+        nonce.encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+    return f"{nonce}.{signature}"
+
+
+def is_valid_csrf_token(token: str) -> bool:
+    try:
+        nonce, supplied_signature = token.split(".", 1)
+    except ValueError:
+        return False
+    if not nonce or not supplied_signature:
+        return False
+    expected_signature = hmac.new(
+        _csrf_secret().encode("utf-8"),
+        nonce.encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+    return hmac.compare_digest(supplied_signature, expected_signature)
 
 
 @dataclass(frozen=True)
@@ -205,6 +248,8 @@ identifier_limiter = configured_limiter
 
 
 async def validate_rate_limit_configuration() -> None:
+    if len(_csrf_secret()) < 32:
+        raise RuntimeError("CSRF_SECRET or JWT_SECRET must be at least 32 characters.")
     if TRUST_PROXY_HEADERS and not TRUSTED_PROXY_NETWORKS:
         raise RuntimeError(
             "TRUSTED_PROXY_IPS is required when TRUST_PROXY_HEADERS is enabled."
@@ -266,6 +311,22 @@ def is_sensitive_auth_path(path: str) -> bool:
     )
 
 
+def route_rate_limit(path: str, method: str) -> tuple[str, int, int] | None:
+    if path.startswith("/product/reports/") and method == "GET":
+        return ("report", WRITE_RATE_LIMIT, WRITE_RATE_WINDOW)
+    if method not in UNSAFE_METHODS:
+        return None
+    if path == "/chat":
+        return ("analysis", ANALYSIS_RATE_LIMIT, ANALYSIS_RATE_WINDOW)
+    if path.startswith("/product/live/"):
+        return ("live", LIVE_RATE_LIMIT, LIVE_RATE_WINDOW)
+    if path == "/product/team/invites":
+        return ("team-invite", TEAM_RATE_LIMIT, TEAM_RATE_WINDOW)
+    if path.startswith("/product/"):
+        return ("product-write", WRITE_RATE_LIMIT, WRITE_RATE_WINDOW)
+    return None
+
+
 def normalize_origin(value: str) -> str:
     raw_value = value.strip().rstrip("/")
     if not raw_value:
@@ -293,13 +354,7 @@ def configured_origin_values() -> set[str]:
         if origin.strip()
     )
 
-    for env_name in (
-        "FRONTEND_URL",
-        "OAUTH_REDIRECT_BASE_URL",
-        "VERCEL_URL",
-        "VERCEL_BRANCH_URL",
-        "VERCEL_PROJECT_PRODUCTION_URL",
-    ):
+    for env_name in ("FRONTEND_URL", "OAUTH_REDIRECT_BASE_URL"):
         value = os.getenv(env_name, "").strip()
         if value:
             origins.add(value)
@@ -360,7 +415,7 @@ async def enforce_auth_identifier_limit(identifier: str, action: str) -> None:
 class SecurityMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next) -> Response:
         if request.method != "OPTIONS":
-            csrf_error = self._validate_browser_origin(request)
+            csrf_error = self._validate_browser_csrf(request)
             if csrf_error is not None:
                 return self._secure(csrf_error, request.url.path)
 
@@ -407,6 +462,33 @@ class SecurityMiddleware(BaseHTTPMiddleware):
                 if not auth_result.allowed:
                     return self._secure(_limited_response(auth_result), request.url.path)
                 selected_result = auth_result
+
+            route_limit = route_rate_limit(request.url.path, request.method)
+            if route_limit is not None:
+                route_name, limit, window = route_limit
+                token_material = (
+                    request.cookies.get(AUTH_COOKIE_NAME)
+                    or request.headers.get("authorization", "")
+                    or "anonymous"
+                )
+                token_hash = hashlib.sha256(token_material.encode("utf-8")).hexdigest()[:20]
+                for key in {
+                    f"route:{route_name}:ip:{remote}",
+                    f"route:{route_name}:token:{token_hash}",
+                }:
+                    try:
+                        route_result = await request_limiter.hit(key, limit, window)
+                    except RateLimiterUnavailable:
+                        return self._secure(
+                            JSONResponse(
+                                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                                content={"detail": "Request protection is temporarily unavailable."},
+                            ),
+                            request.url.path,
+                        )
+                    if not route_result.allowed:
+                        return self._secure(_limited_response(route_result), request.url.path)
+                    selected_result = route_result
         else:
             selected_result = None
 
@@ -417,18 +499,32 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         return self._secure(response, request.url.path)
 
     @staticmethod
-    def _validate_browser_origin(request: Request) -> JSONResponse | None:
-        if request.method not in {"POST", "PUT", "PATCH", "DELETE"}:
+    def _validate_browser_csrf(request: Request) -> JSONResponse | None:
+        if request.method not in UNSAFE_METHODS:
             return None
         if AUTH_COOKIE_NAME not in request.cookies:
             return None
         origin = normalize_origin(request.headers.get("origin", ""))
+        if not origin:
+            origin = normalize_origin(request.headers.get("referer", ""))
         allowed_origins = allowed_browser_origins()
         if origin and (
             origin == request_origin(request)
             or origin in allowed_origins
         ):
-            return None
+            csrf_cookie = request.cookies.get(CSRF_COOKIE_NAME, "")
+            csrf_header = request.headers.get(CSRF_HEADER_NAME, "")
+            if (
+                csrf_cookie
+                and csrf_header
+                and hmac.compare_digest(csrf_cookie, csrf_header)
+                and is_valid_csrf_token(csrf_cookie)
+            ):
+                return None
+            return JSONResponse(
+                status_code=status.HTTP_403_FORBIDDEN,
+                content={"detail": "CSRF token is invalid or missing."},
+            )
         return JSONResponse(
             status_code=status.HTTP_403_FORBIDDEN,
             content={"detail": "Request origin is not allowed."},
@@ -488,7 +584,9 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         response.headers["Content-Security-Policy"] = (
             "default-src 'none'; frame-ancestors 'none'; base-uri 'none'"
         )
-        if path.startswith("/auth"):
+        if os.getenv("ENV", "development").lower() == "production":
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        if path.startswith(("/auth", "/product", "/chat", "/history")):
             response.headers["Cache-Control"] = "no-store"
             response.headers["Pragma"] = "no-cache"
         return response

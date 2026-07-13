@@ -35,6 +35,10 @@ function ForgotPassword({ navigateTo }) {
       setError('Use at least 8 characters for your new password.')
       return
     }
+    if (!/[A-Za-z]/.test(password) || !/\d/.test(password)) {
+      setError('Use at least one letter and one number for your new password.')
+      return
+    }
     if (password !== confirmPassword) {
       setError('Passwords do not match.')
       return

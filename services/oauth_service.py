@@ -8,6 +8,7 @@ import httpx
 from fastapi import HTTPException, Request, status
 
 from models.validation import clean_email
+from security import allowed_browser_origins, normalize_origin
 
 
 @dataclass(frozen=True)
@@ -64,10 +65,7 @@ def provider_credentials(provider: str) -> tuple[OAuthProvider, str, str]:
     if not client_id or not client_secret:
         raise HTTPException(
             status_code=status.HTTP_501_NOT_IMPLEMENTED,
-            detail=(
-                f"{config.display_name} sign-in is not configured yet. "
-                f"Set {config.client_id_env} and {config.client_secret_env}."
-            ),
+            detail=f"{config.display_name} sign-in is not available right now.",
         )
     return config, client_id, client_secret
 
@@ -82,13 +80,25 @@ def external_base_url(request: Request) -> str:
         or os.getenv("FRONTEND_URL", "").strip()
     )
     if configured:
-        return configured.rstrip("/")
+        normalized_configured = normalize_origin(configured)
+        if not normalized_configured:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="OAuth redirect configuration is invalid.",
+            )
+        return normalized_configured
 
     forwarded_proto = request.headers.get("x-forwarded-proto", "").split(",", 1)[0].strip()
     forwarded_host = request.headers.get("x-forwarded-host", "").split(",", 1)[0].strip()
     scheme = forwarded_proto or request.url.scheme
     host = forwarded_host or request.headers.get("host") or request.url.netloc
-    return f"{scheme}://{host}".rstrip("/")
+    normalized = normalize_origin(f"{scheme}://{host}")
+    if normalized not in allowed_browser_origins():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="OAuth redirect origin is not allowed.",
+        )
+    return normalized
 
 
 def oauth_redirect_uri(request: Request, provider: str) -> str:

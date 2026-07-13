@@ -182,6 +182,8 @@ function validateSignup(form) {
   }
   if (form.password.length < 8) {
     errors.password = 'Use at least 8 characters.'
+  } else if (!/[A-Za-z]/.test(form.password) || !/\d/.test(form.password)) {
+    errors.password = 'Use at least one letter and one number.'
   }
   if (form.confirm_password !== form.password) {
     errors.confirm_password = 'Passwords do not match.'
@@ -191,13 +193,13 @@ function validateSignup(form) {
 
 function normalizeSignupError(message = '') {
   if (message.includes('Unable to create an account with those details')) {
-    return 'An account with this email already exists. Sign in instead, or reset your password if you forgot it.'
+    return 'Unable to create an account with those details. Check your information or try signing in.'
   }
   return message || 'Unable to create an account. Please check your details and try again.'
 }
 
 function isExistingAccountError(message = '') {
-  return message.toLowerCase().includes('account with this email already exists')
+  return false
 }
 
 export default Signup

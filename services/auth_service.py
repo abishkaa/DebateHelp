@@ -23,6 +23,7 @@ from services.email_service import (
     send_password_reset_email,
     send_verification_email,
 )
+from security import CSRF_COOKIE_NAME, create_csrf_token
 
 load_backend_env()
 
@@ -191,11 +192,25 @@ def set_auth_cookie(
     *,
     remember: bool = False,
 ) -> None:
+    max_age = 60 * 60 * 24 * 30 if remember else None
     response.set_cookie(
         key=AUTH_COOKIE_NAME,
         value=token,
-        max_age=60 * 60 * 24 * 30 if remember else None,
+        max_age=max_age,
         httponly=True,
+        secure=AUTH_COOKIE_SECURE,
+        samesite=AUTH_COOKIE_SAMESITE,
+        path="/",
+    )
+    set_csrf_cookie(response, max_age=max_age)
+
+
+def set_csrf_cookie(response: Response, *, max_age: int | None = None) -> None:
+    response.set_cookie(
+        key=CSRF_COOKIE_NAME,
+        value=create_csrf_token(),
+        max_age=max_age,
+        httponly=False,
         secure=AUTH_COOKIE_SECURE,
         samesite=AUTH_COOKIE_SAMESITE,
         path="/",
@@ -206,6 +221,12 @@ def clear_auth_cookie(response: Response) -> None:
     response.delete_cookie(
         key=AUTH_COOKIE_NAME,
         httponly=True,
+        secure=AUTH_COOKIE_SECURE,
+        samesite=AUTH_COOKIE_SAMESITE,
+        path="/",
+    )
+    response.delete_cookie(
+        key=CSRF_COOKIE_NAME,
         secure=AUTH_COOKIE_SECURE,
         samesite=AUTH_COOKIE_SAMESITE,
         path="/",
@@ -348,7 +369,7 @@ async def create_user(db: AsyncSession | None, request: SignupRequest) -> tuple[
     if existing:
         hash_password(request.password)
         raise auth_error(
-            "An account with this email already exists. Sign in instead, or reset your password if you forgot it.",
+            "Unable to create an account with those details.",
             status.HTTP_409_CONFLICT,
         )
 
@@ -396,7 +417,7 @@ async def create_user(db: AsyncSession | None, request: SignupRequest) -> tuple[
             await db.rollback()
             hash_password(request.password)
             raise auth_error(
-                "An account with this email already exists. Sign in instead, or reset your password if you forgot it.",
+                "Unable to create an account with those details.",
                 status.HTTP_409_CONFLICT,
             ) from exc
         await db.refresh(user)
@@ -461,6 +482,8 @@ async def find_or_create_oauth_user(
 ) -> User | dict[str, Any]:
     email = normalize_email(str(profile["email"]))
     provider = str(profile.get("provider") or "oauth")
+    if profile.get("email_verified") is not True:
+        raise auth_error("OAuth provider did not verify this email address.", status.HTTP_403_FORBIDDEN)
     full_name = str(profile.get("full_name") or email.split("@", 1)[0]).strip()
     profile_image_url = profile.get("profile_image_url")
     existing = await find_user_by_email(db, email)
@@ -562,7 +585,7 @@ async def verify_email_token(db: AsyncSession | None, token: str) -> User | dict
 
     user = await find_user_by_id(db, user_id)
     if not user:
-        raise auth_error("Account no longer exists.", status.HTTP_404_NOT_FOUND)
+        raise auth_error("Verification link is invalid or expired.", status.HTTP_400_BAD_REQUEST)
 
     if isinstance(user, dict):
         user["is_verified"] = True
@@ -600,7 +623,7 @@ async def reset_password(db: AsyncSession | None, token: str, password: str) -> 
 
     user = await find_user_by_id(db, user_id)
     if not user:
-        raise auth_error("Account no longer exists.", status.HTTP_404_NOT_FOUND)
+        raise auth_error("Reset link is invalid or expired.", status.HTTP_400_BAD_REQUEST)
 
     password_hash = hash_password(password)
     if isinstance(user, dict):
@@ -644,14 +667,14 @@ async def update_profile(
 async def get_user_from_token(db: AsyncSession | None, token: str) -> User | dict[str, Any]:
     payload = decode_jwt(token)
     if await is_token_revoked(db, str(payload["jti"])):
-        raise auth_error("Token has been revoked")
+        raise auth_error("Invalid token")
 
     user_id = str(payload.get("sub") or "")
     if not await is_user_token_current(db, user_id, int(payload["iat_ms"])):
-        raise auth_error("Token is no longer valid")
+        raise auth_error("Invalid token")
     user = await find_user_by_id(db, user_id)
     if not user:
-        raise auth_error("User not found", status.HTTP_404_NOT_FOUND)
+        raise auth_error("Invalid token")
     return user
 
 
@@ -813,5 +836,5 @@ async def cleanup_auth_security_records() -> None:
 def oauth_not_configured(provider: str) -> HTTPException:
     return HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail=f"{provider.title()} OAuth is not configured yet. Add client credentials to enable it.",
+        detail=f"{provider.title()} sign-in is not available right now.",
     )

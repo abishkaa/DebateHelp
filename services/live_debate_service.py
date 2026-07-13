@@ -324,6 +324,9 @@ async def submit_live_statement(
             raise PermissionError("Join the debate room before submitting.")
         if room.get("status") != "running":
             raise ValueError("Start the live debate before submitting statements.")
+        existing_statements = _memory_live_statements.get(code, [])
+        if _is_duplicate_statement(existing_statements, role, text):
+            raise ValueError("This statement was already submitted. Edit it before sending again.")
         statement = await _analyze_and_build_statement(
             db,
             current_user,
@@ -343,6 +346,25 @@ async def submit_live_statement(
         raise PermissionError("Join the debate room before submitting.")
     if room.status != "running":
         raise ValueError("Start the live debate before submitting statements.")
+
+    duplicate_result = await db.execute(
+        select(LiveDebateStatement)
+        .where(
+            LiveDebateStatement.room_code == code,
+            LiveDebateStatement.user_id == user_id,
+            LiveDebateStatement.speaker_key == role,
+            LiveDebateStatement.body == text,
+        )
+        .order_by(LiveDebateStatement.created_at.desc())
+        .limit(1)
+    )
+    duplicate = duplicate_result.scalar_one_or_none()
+    if duplicate is not None:
+        duplicate_created_at = duplicate.created_at
+        if duplicate_created_at.tzinfo is None:
+            duplicate_created_at = duplicate_created_at.replace(tzinfo=timezone.utc)
+        if (_now() - duplicate_created_at.astimezone(timezone.utc)).total_seconds() < 10:
+            raise ValueError("This statement was already submitted. Edit it before sending again.")
 
     statement_data = await _analyze_and_build_statement(db, current_user, room, role, text)
     statement = LiveDebateStatement(
@@ -366,6 +388,20 @@ async def submit_live_statement(
         .order_by(LiveDebateStatement.created_at.asc())
     )
     return serialize_live_room(room, list(result.scalars().all()), current_user)
+
+
+def _is_duplicate_statement(statements: list[dict[str, Any]], role: str, text: str) -> bool:
+    if not statements:
+        return False
+    latest = statements[-1]
+    created_at = _statement_value(latest, "created_at")
+    if not isinstance(created_at, datetime):
+        return False
+    return (
+        _statement_value(latest, "speaker_key") == role
+        and str(_statement_value(latest, "body", "")).strip() == text.strip()
+        and (_now() - created_at).total_seconds() < 10
+    )
 
 
 async def _analyze_and_build_statement(
