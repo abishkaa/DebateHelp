@@ -1,4 +1,4 @@
-import { API_BASE_URL, buildApiUrl, networkErrorMessage } from './apiConfig.js'
+import { apiFetch, buildApiUrl, networkErrorMessage } from './apiConfig.js'
 
 const LOCAL_TOKEN_KEY = 'debate_auth_token'
 const SESSION_TOKEN_KEY = 'debate_auth_session_token'
@@ -11,7 +11,7 @@ export function clearLegacyTokens() {
 function oauthStartUrl(provider) {
   const nextPath = window.location.pathname === '/signup' ? '/signup' : '/login'
   const query = new URLSearchParams({ next: nextPath })
-  return `${API_BASE_URL}/auth/oauth/${encodeURIComponent(provider)}/start?${query.toString()}`
+  return `${buildApiUrl(`/auth/oauth/${encodeURIComponent(provider)}/start`)}?${query.toString()}`
 }
 
 function errorMessage(data, fallback) {
@@ -47,14 +47,14 @@ async function request(path, { method = 'GET', body } = {}) {
 
   let response
   try {
-    response = await fetch(buildApiUrl(path), {
+    response = await apiFetch(path, {
       method,
       headers,
       body: body ? JSON.stringify(body) : undefined,
       credentials: 'include',
     })
-  } catch {
-    throw new Error(networkErrorMessage('account server'))
+  } catch (error) {
+    throw new Error(networkErrorMessage('account server', error))
   }
 
   const data = await response.json().catch(() => ({}))

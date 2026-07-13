@@ -2,42 +2,44 @@ import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
-import net from 'node:net'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const projectRoot = path.resolve(__dirname, '..')
 const backendPort = 8001
+const backendOrigin = `http://127.0.0.1:${backendPort}`
 
 function isLocalBackendTarget(target) {
   return /^https?:\/\/(?:localhost|127\.0\.0\.1):8001\/?$/.test(target || '')
 }
 
-function canConnectToPort(port) {
-  return new Promise((resolve) => {
-    const socket = net.createConnection({ host: '127.0.0.1', port })
-    socket.once('connect', () => {
-      socket.destroy()
-      resolve(true)
+async function backendHealthOk() {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 700)
+
+  try {
+    const response = await fetch(`${backendOrigin}/health/backend`, {
+      signal: controller.signal,
     })
-    socket.once('error', () => {
-      socket.destroy()
-      resolve(false)
-    })
-    socket.setTimeout(450, () => {
-      socket.destroy()
-      resolve(false)
-    })
-  })
+    const data = await response.json().catch(() => ({}))
+
+    return response.ok && data?.status === 'ok'
+  } catch {
+    return false
+  } finally {
+    clearTimeout(timeout)
+  }
 }
 
-async function waitForPort(port, timeoutMs = 20_000) {
+async function waitForBackendHealth(timeoutMs = 20_000) {
   const startedAt = Date.now()
+
   while (Date.now() - startedAt < timeoutMs) {
-    if (await canConnectToPort(port)) return true
+    if (await backendHealthOk()) return true
     await new Promise((resolve) => setTimeout(resolve, 250))
   }
+
   return false
 }
 
@@ -76,8 +78,8 @@ function localBackendPlugin(proxyTarget) {
     async configureServer(server) {
       if (!isLocalBackendTarget(proxyTarget)) return
       if (process.env.VITE_AUTO_START_BACKEND === 'false') return
-      if (await canConnectToPort(backendPort)) {
-        server.config.logger.info('DebateHelp backend already running on http://localhost:8001')
+      if (await backendHealthOk()) {
+        server.config.logger.info('DebateHelp backend is healthy on http://localhost:8001')
         return
       }
 
@@ -116,11 +118,11 @@ function localBackendPlugin(proxyTarget) {
       process.once('SIGTERM', () => stopBackend(child))
       process.once('exit', () => stopBackend(child))
 
-      if (await waitForPort(backendPort)) {
+      if (await waitForBackendHealth()) {
         server.config.logger.info('DebateHelp backend ready on http://localhost:8001')
       } else {
         server.config.logger.warn(
-          'DebateHelp backend is still starting; /api requests may fail until http://localhost:8001 is ready.',
+          'DebateHelp backend did not pass /health/backend yet; check the backend logs above before using /api requests.',
         )
       }
     },

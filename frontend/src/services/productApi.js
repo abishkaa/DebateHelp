@@ -1,16 +1,16 @@
-import { buildApiUrl, networkErrorMessage } from './apiConfig.js'
+import { apiFetch, networkErrorMessage } from './apiConfig.js'
 
 async function request(path, options = {}) {
   let response
   try {
-    response = await fetch(buildApiUrl(path), {
+    response = await apiFetch(path, {
       method: options.method || 'GET',
       headers: options.body ? { 'Content-Type': 'application/json' } : undefined,
       body: options.body ? JSON.stringify(options.body) : undefined,
       credentials: 'include',
     })
-  } catch {
-    throw new Error(networkErrorMessage('product server'))
+  } catch (error) {
+    throw new Error(networkErrorMessage('product server', error))
   }
   const data = await response.json().catch(() => ({}))
   if (!response.ok) {
