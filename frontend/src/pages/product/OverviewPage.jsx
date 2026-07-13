@@ -10,7 +10,6 @@ import {
   TrendingUp,
   Users,
 } from 'lucide-react'
-import { achievements, progressMetrics } from '../../data/productData.js'
 import { productApi } from '../../services/productApi.js'
 
 function OverviewPage({ currentUser, navigateTo, onExport, token }) {
@@ -63,15 +62,20 @@ function OverviewPage({ currentUser, navigateTo, onExport, token }) {
     setTeamMembers([buildCurrentTeamMember(currentUser)])
   }, [currentUser, token])
 
-  const metrics = dashboard?.metrics?.length ? dashboard.metrics : progressMetrics
+  const metrics = dashboard?.metrics || []
   const chartValues = dashboard?.progress_series?.length ? dashboard.progress_series : []
-  const milestoneData = dashboard?.achievements?.length ? dashboard.achievements : achievements
+  const milestoneData = dashboard?.achievements || []
+  const insightData = dashboard?.insights || []
   const sessionData = useMemo(() => dashboard?.recent_sessions || [], [dashboard])
   const hasSessions = sessionData.length > 0
   const latestSession = sessionData[0]
   const currentUserName = currentUser?.full_name || currentUser?.email || 'You'
   const teamMemberCount = teamMembers.length
   const pendingTeamCount = teamMembers.filter((member) => member.status === 'Invited').length
+  const frequencyInsight = insightData.find((insight) => insight.title === 'Practice frequency')
+  const improvementInsight = insightData.find((insight) => insight.title === 'Average improvement')
+  const strongestInsight = insightData.find((insight) => insight.title === 'Strongest saved topic')
+  const priorityInsight = insightData.find((insight) => insight.title === 'Coaching priority')
 
   return (
     <div className="product-page overview-page">
@@ -87,15 +91,20 @@ function OverviewPage({ currentUser, navigateTo, onExport, token }) {
       />
 
       <section className="metric-strip" aria-label="Progress metrics">
-        {metrics.map((metric) => (
-          <article className={`metric-block ${metric.tone}`} key={metric.label}>
-            <span>{metric.label}</span>
-            <strong>{metric.value}</strong>
-            <small>
-              {metric.change}
-            </small>
-          </article>
-        ))}
+        {metrics.length ? metrics.map((metric) => (
+            <article className={`metric-block ${metric.tone}`} key={metric.label}>
+              <span>{metric.label}</span>
+              <strong>{metric.value}</strong>
+              <small>{metric.change}</small>
+              {metric.detail ? <em>{metric.detail}</em> : null}
+            </article>
+          )) : (
+            <article className="metric-block amber metric-block-empty">
+              <span>{syncing ? 'Syncing real metrics' : 'No activity measured'}</span>
+              <strong>{syncing ? 'Loading' : 'No data'}</strong>
+              <small>{syncing ? 'Reading saved debate activity' : 'Analyze your first argument to generate real stats.'}</small>
+            </article>
+          )}
       </section>
 
       <section className="overview-primary-grid">
@@ -120,8 +129,8 @@ function OverviewPage({ currentUser, navigateTo, onExport, token }) {
               title="Strengths"
               tone="green"
               items={hasSessions ? [
-                ['Saved work', `${sessionData.length} real session${sessionData.length === 1 ? '' : 's'} recorded.`],
-                ['Latest score', `${latestSession.score}% on ${latestSession.topic}.`],
+                [strongestInsight?.title || 'Latest score', strongestInsight?.detail || `${latestSession.score}% on ${latestSession.topic}.`],
+                [frequencyInsight?.title || 'Saved work', frequencyInsight?.detail || `${sessionData.length} real session${sessionData.length === 1 ? '' : 's'} recorded.`],
               ] : [
                 ['No signal yet', 'Analyze an argument to measure strengths from real work.'],
               ]}
@@ -130,8 +139,8 @@ function OverviewPage({ currentUser, navigateTo, onExport, token }) {
               title="Needs improvement"
               tone="amber"
               items={hasSessions ? [
-                ['Keep practicing', 'Use the report view to turn the latest analysis into next steps.'],
-                ['Add sources', 'Evidence quality improves when your argument includes verifiable citations.'],
+                [priorityInsight?.title || 'Coaching priority', priorityInsight?.detail || 'Open the report view to find the weakest saved session.'],
+                [improvementInsight?.title || 'Average improvement', improvementInsight?.detail || 'Need at least two saved sessions to calculate progress.'],
               ] : [
                 ['Waiting for data', 'No weak spots will be guessed before you create a real session.'],
               ]}
@@ -179,16 +188,21 @@ function OverviewPage({ currentUser, navigateTo, onExport, token }) {
             onAction={() => navigateTo('/app/profile')}
           />
           <div className="achievement-list">
-            {milestoneData.map((achievement) => (
-              <div key={achievement.title}>
-                <span className={`achievement-symbol ${achievement.tone}`}><Award size={19} /></span>
-                <span>
-                  <strong>{achievement.title}</strong>
-                  <small>{achievement.description}</small>
-                </span>
-                <b>{achievement.status}</b>
-              </div>
-            ))}
+            {milestoneData.length ? milestoneData.map((achievement) => (
+                <div key={achievement.title}>
+                  <span className={`achievement-symbol ${achievement.tone}`}><Award size={19} /></span>
+                  <span>
+                    <strong>{achievement.title}</strong>
+                    <small>{achievement.description}</small>
+                  </span>
+                  <b>{achievement.status}</b>
+                </div>
+              )) : (
+                <div className="panel-empty-state compact">
+                  <strong>{syncing ? 'Loading milestones...' : 'No milestones calculated yet.'}</strong>
+                  <p>Milestones are generated from saved sessions and analyzed arguments.</p>
+                </div>
+              )}
           </div>
         </article>
 
@@ -205,9 +219,11 @@ function OverviewPage({ currentUser, navigateTo, onExport, token }) {
               </div>
               <p>Next useful moves:</p>
               <ul>
-                <li>Open the saved report and revise the weakest claim.</li>
-                <li>Add citations before running the next analysis.</li>
-                <li>Practice one rebuttal against your main assumption.</li>
+                {insightData.length ? insightData.slice(0, 3).map((insight) => (
+                  <li key={insight.title}>{insight.title}: {insight.detail}</li>
+                )) : (
+                  <li>Open the saved report and revise the weakest claim from your latest real session.</li>
+                )}
               </ul>
             </>
           ) : (

@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ArrowRight, CalendarDays, Search, TrendingUp } from 'lucide-react'
-import { famousDebates } from '../../data/productData.js'
 import { productApi } from '../../services/productApi.js'
 import { PageHeading } from './OverviewPage.jsx'
 
@@ -91,9 +90,10 @@ function HistoryPage({ currentPath = '', navigateTo, token }) {
       ) : (
         <HistoryEmptyState
           hasQuery={Boolean(query.trim())}
-          onOpen={(title) => {
+          query={query}
+          onStart={(topic = '') => {
             setQuery('')
-            navigateTo(`/app/analyze?topic=${encodeURIComponent(title)}`)
+            navigateTo(topic ? `/app/analyze?topic=${encodeURIComponent(topic)}` : '/app/analyze?new=1')
           }}
         />
       )}
@@ -101,7 +101,8 @@ function HistoryPage({ currentPath = '', navigateTo, token }) {
   )
 }
 
-function HistoryEmptyState({ hasQuery, onOpen }) {
+function HistoryEmptyState({ hasQuery, onStart, query }) {
+  const trimmedQuery = query.trim()
   return (
     <section className="product-panel professional-empty">
       <TrendingUp size={28} />
@@ -109,16 +110,21 @@ function HistoryEmptyState({ hasQuery, onOpen }) {
       <p>
         {hasQuery
           ? 'Try a different search term, or start a new analysis.'
-          : 'Analyze an argument to create your first saved archive entry. You can also use a classic debate as a practice prompt.'}
+          : 'Analyze an argument to create your first saved archive entry. DebateHelp will only archive real sessions saved to your account.'}
       </p>
       <div>
-        {famousDebates.map((debate) => (
-          <button key={debate.title} type="button" onClick={() => onOpen(debate.title)}>
-            <strong>{debate.title}</strong>
-            <span>{debate.description}</span>
+        {hasQuery && trimmedQuery ? (
+          <button type="button" onClick={() => onStart(trimmedQuery)}>
+            <strong>Analyze “{trimmedQuery}”</strong>
+            <span>Use your search as the next real practice topic.</span>
             <ArrowRight size={16} />
           </button>
-        ))}
+        ) : null}
+        <button type="button" onClick={() => onStart()}>
+          <strong>Start a blank analysis</strong>
+          <span>Create the first real saved session for this account.</span>
+          <ArrowRight size={16} />
+        </button>
       </div>
     </section>
   )

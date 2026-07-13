@@ -136,6 +136,13 @@ function ReportsPage({ currentPath = '', onExport, token }) {
               <ReportSection icon={<ShieldCheck size={18} />} title="Evidence Assessment" items={report.evidence} />
               <ReportSection icon={<Scale size={18} />} title="Logical Fallacies" items={report.fallacies} />
               <ReportSection icon={<CheckCircle2 size={18} />} title="Counterarguments" items={report.counterarguments} />
+              {Array.isArray(report.diagnostics) && report.diagnostics.length ? (
+                <ReportSection
+                  icon={<Scale size={18} />}
+                  title="Score Diagnostics"
+                  items={report.diagnostics.slice(0, 5).map(formatDiagnosticItem)}
+                />
+              ) : null}
               {Array.isArray(report.improvementPlan) && report.improvementPlan.length ? (
                 <ReportSection
                   icon={<Target size={18} />}
@@ -191,6 +198,15 @@ function formatPlanItem(item, index) {
   const score = Number.isFinite(Number(item.score)) ? `${Math.round(Number(item.score))}%` : 'needs work'
   const action = item.action || item.problem || 'Revise this part before the next debate.'
   return `${area} (${score}): ${action}`
+}
+
+function formatDiagnosticItem(item, index) {
+  if (!item || typeof item !== 'object') return String(item || `Diagnostic ${index + 1}`)
+  const area = item.area || `Diagnostic ${index + 1}`
+  const score = Number.isFinite(Number(item.score)) ? `${Math.round(Number(item.score))}%` : 'no score'
+  const why = item.why || item.meaning || item.signal || 'Computed from the saved argument.'
+  const improve = item.improve || item.weakness || ''
+  return `${area} (${score}): ${why}${improve ? ` Next: ${improve}` : ''}`
 }
 
 export default ReportsPage

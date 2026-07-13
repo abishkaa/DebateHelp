@@ -12,7 +12,7 @@ import {
   Target,
 } from 'lucide-react'
 import { productApi } from '../../services/productApi.js'
-import { buildApiUrl, networkErrorMessage } from '../../services/apiConfig.js'
+import { apiFetch, networkErrorMessage } from '../../services/apiConfig.js'
 import { PanelHeading, PageHeading } from './OverviewPage.jsx'
 
 const TRACE_STEPS = [
@@ -89,7 +89,7 @@ function AnalyzePage({ currentPath = '', onExport, token }) {
       const activeSessionId = sessionIdRef.current
       let response
       try {
-        response = await fetch(buildApiUrl('/chat'), {
+        response = await apiFetch('/chat', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -101,8 +101,8 @@ function AnalyzePage({ currentPath = '', onExport, token }) {
             difficulty: 'hard',
           }),
         })
-      } catch {
-        throw new Error(networkErrorMessage('analysis service'))
+      } catch (fetchError) {
+        throw new Error(networkErrorMessage('analysis service', fetchError))
       }
 
       if (!response.ok) {
@@ -172,10 +172,10 @@ function AnalyzePage({ currentPath = '', onExport, token }) {
       />
 
       <section className="analysis-score-strip">
-        <ScoreMetric label="Argument strength" value={analysis.strength} tone="blue" />
-        <ScoreMetric label="Evidence quality" value={analysis.evidence} tone="green" />
-        <ScoreMetric label="Counterargument coverage" value={analysis.coverage} tone="amber" />
-        <ScoreMetric label="Logical consistency" value={analysis.logic} tone="red" />
+        <ScoreMetric available={Boolean(analysis.method)} label="Argument strength" value={analysis.strength} tone="blue" />
+        <ScoreMetric available={Boolean(analysis.method)} label="Evidence quality" value={analysis.evidence} tone="green" />
+        <ScoreMetric available={Boolean(analysis.method)} label="Counterargument coverage" value={analysis.coverage} tone="amber" />
+        <ScoreMetric available={Boolean(analysis.method)} label="Logical consistency" value={analysis.logic} tone="red" />
       </section>
 
       <section className="analysis-workspace">
@@ -232,6 +232,24 @@ function AnalyzePage({ currentPath = '', onExport, token }) {
             title="Here is why"
             text={analysis.why}
           />
+          {analysis.diagnostics.length ? (
+            <section className="analysis-diagnostic-grid" aria-label="Score diagnostic breakdown">
+              {analysis.diagnostics.map((diagnostic) => (
+                <article className={scoreTone(diagnostic.score)} key={diagnostic.area}>
+                  <header>
+                    <span>{diagnostic.area}</span>
+                    <strong>{diagnostic.score}%</strong>
+                  </header>
+                  <p>{diagnostic.why}</p>
+                  {diagnostic.influencedBy.length ? (
+                    <blockquote>{diagnostic.influencedBy[0]}</blockquote>
+                  ) : null}
+                  <small>{diagnostic.weakness}</small>
+                  <em>{diagnostic.improve}</em>
+                </article>
+              ))}
+            </section>
+          ) : null}
           <AnalysisSection
             icon={<ShieldCheck size={18} />}
             title="Here is the evidence"
@@ -342,16 +360,16 @@ function AnalyzePage({ currentPath = '', onExport, token }) {
   )
 }
 
-function ScoreMetric({ label, value, tone }) {
+function ScoreMetric({ available = true, label, value, tone }) {
   return (
     <article className={`analysis-score ${tone}`}>
       <span>{label}</span>
-      <strong>{value}%</strong>
+      <strong>{available ? `${value}%` : 'No data'}</strong>
       <progress
         aria-label={`${label} score`}
         className="score-progress"
         max="100"
-        value={value}
+        value={available ? value : 0}
       />
     </article>
   )
@@ -382,6 +400,7 @@ function buildAnalysis(reply, backendAnalysis) {
       counterargument: backendAnalysis.counterargument || 'No specific counterargument was detected yet.',
       change: backendAnalysis.change || 'Revise the claim or evidence, then run analysis again to update the conclusion.',
       coachSummary: backendAnalysis.coachSummary || summarizeReply(reply),
+      diagnostics: normalizeDiagnostics(backendAnalysis.diagnostics),
       sources: normalizeSources(backendAnalysis.sources),
       fallacies: normalizeFallacies(backendAnalysis.fallacies),
       fallacyNote: backendAnalysis.fallacyNote || 'No major fallacy pattern was detected by the local analyzer.',
@@ -410,6 +429,7 @@ function buildAnalysis(reply, backendAnalysis) {
     fallacyNote: 'No backend analysis has been run yet.',
     improvementPlan: [],
     recommendations: [],
+    diagnostics: [],
     method: '',
     reply,
   }
@@ -450,6 +470,22 @@ function normalizeImprovementPlan(plan) {
     detected: item?.detected || item?.signal || 'Computed from the submitted argument.',
     action: item?.action || 'Add a clearer claim, source, warrant, or answer to the strongest objection.',
     example: item?.example || '',
+  }))
+}
+
+function normalizeDiagnostics(diagnostics) {
+  if (!Array.isArray(diagnostics)) return []
+  return diagnostics.slice(0, 5).map((item, index) => ({
+    area: item?.area || `Category ${index + 1}`,
+    score: toScore(item?.score ?? 0),
+    status: item?.status || 'needs work',
+    signal: item?.signal || '',
+    why: item?.why || item?.meaning || 'This category was computed from the submitted argument.',
+    influencedBy: Array.isArray(item?.influencedBy)
+      ? item.influencedBy.filter(Boolean).slice(0, 2)
+      : [],
+    weakness: item?.weakness || 'Review this category before using the argument in a live round.',
+    improve: item?.improve || 'Add a clearer claim, source, warrant, or answer to the strongest objection.',
   }))
 }
 

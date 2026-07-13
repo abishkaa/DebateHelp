@@ -359,6 +359,16 @@ def key_sentences(text: str, limit: int = 3) -> list[str]:
     return [sentence for _, sentence in ranked[:limit] if sentence]
 
 
+def matching_sentences(text: str, patterns: list[re.Pattern[str]], limit: int = 2) -> list[str]:
+    matches: list[str] = []
+    for sentence in sentences(text):
+        if any(pattern.search(sentence) for pattern in patterns):
+            matches.append(short_excerpt(sentence, 180))
+        if len(matches) >= limit:
+            break
+    return matches
+
+
 def score_status(score: int | float) -> str:
     numeric = int(score)
     if numeric >= 82:
@@ -371,6 +381,7 @@ def score_status(score: int | float) -> str:
 
 
 def metric_diagnostics(
+    text: str,
     scores: dict[str, Any],
     fallacies: list[dict[str, Any]],
     sources: list[dict[str, Any]],
@@ -379,6 +390,17 @@ def metric_diagnostics(
         source for source in sources
         if str(source.get("tone")) == "green" or str(source.get("source", "")).startswith(("http://", "https://"))
     ]
+    fallback_excerpts = key_sentences(text, 1) or ([short_excerpt(text)] if text.strip() else [])
+    claim_excerpts = matching_sentences(text, [CLAIM_RE, IMPACT_RE]) or fallback_excerpts
+    evidence_excerpts = matching_sentences(text, [EVIDENCE_RE]) or fallback_excerpts
+    reasoning_excerpts = matching_sentences(text, [REASONING_RE, IMPACT_RE]) or fallback_excerpts
+    coverage_excerpts = matching_sentences(text, [COUNTER_RE, QUALIFIER_RE]) or fallback_excerpts
+    logic_excerpts = [
+        str(item.get("excerpt") or item.get("detail"))
+        for item in fallacies[:2]
+        if item.get("excerpt") or item.get("detail")
+    ] or fallback_excerpts
+
     return [
         {
             "area": "Claim clarity",
@@ -386,6 +408,13 @@ def metric_diagnostics(
             "status": score_status(scores["claim_clarity"]),
             "signal": f"{scores['claim_hits']} claim marker(s), {scores['word_count']} words",
             "meaning": "Measures whether the argument clearly names an actor, action, and outcome.",
+            "why": (
+                f"Earned {int(scores['claim_clarity'])}% because the analyzer found "
+                f"{scores['claim_hits']} claim marker(s) across {scores['word_count']} words."
+            ),
+            "influencedBy": claim_excerpts,
+            "weakness": "The claim needs a more explicit actor, action, mechanism, or measurable outcome." if scores["claim_clarity"] < 72 else "The claim is readable; the next gain is tighter framing and weighing.",
+            "improve": "Open with one sentence that says who should do what, why it works, and what outcome proves success.",
         },
         {
             "area": "Evidence quality",
@@ -393,6 +422,13 @@ def metric_diagnostics(
             "status": score_status(scores["evidence"]),
             "signal": f"{scores['evidence_hits']} evidence signal(s), {len(named_or_url_sources)} exact/link citation(s)",
             "meaning": "Measures named sources, statistics, years, URLs, studies, and verifiable data signals.",
+            "why": (
+                f"Earned {int(scores['evidence'])}% because the text contains "
+                f"{scores['evidence_hits']} evidence signal(s) and {len(named_or_url_sources)} exact/link citation(s)."
+            ),
+            "influencedBy": evidence_excerpts,
+            "weakness": "The evidence is not tied to a verifiable source, date, method, or exact result." if not named_or_url_sources else "Evidence exists; explain why that source proves the central premise.",
+            "improve": "Add one named source with date, method, and the exact fact it proves.",
         },
         {
             "area": "Reasoning depth",
@@ -400,6 +436,13 @@ def metric_diagnostics(
             "status": score_status(scores["reasoning"]),
             "signal": f"{scores['reasoning_hits']} causal connector(s), {scores['impact_hits']} impact marker(s)",
             "meaning": "Measures whether the claim explains the mechanism connecting evidence to impact.",
+            "why": (
+                f"Earned {int(scores['reasoning'])}% from {scores['reasoning_hits']} causal connector(s) "
+                f"and {scores['impact_hits']} impact marker(s)."
+            ),
+            "influencedBy": reasoning_excerpts,
+            "weakness": "The warrant needs a clearer cause-to-effect chain." if scores["reasoning"] < 72 else "The warrant is present; make it harder to attack by adding comparison or probability.",
+            "improve": "Use a because-chain: cause -> mechanism -> affected group -> measurable result.",
         },
         {
             "area": "Counterargument coverage",
@@ -407,6 +450,13 @@ def metric_diagnostics(
             "status": score_status(scores["coverage"]),
             "signal": f"{scores['counter_hits']} opposition marker(s), {scores['qualifier_hits']} qualifier(s)",
             "meaning": "Measures whether the argument anticipates objections, tradeoffs, and alternative explanations.",
+            "why": (
+                f"Earned {int(scores['coverage'])}% because DebateHelp found "
+                f"{scores['counter_hits']} opposition marker(s) and {scores['qualifier_hits']} qualifier(s)."
+            ),
+            "influencedBy": coverage_excerpts,
+            "weakness": "The strongest objection or tradeoff is not answered directly." if scores["counter_hits"] == 0 else "Opposition is acknowledged; sharpen the response into direct clash.",
+            "improve": "Add one concession-plus-answer sentence: even if the opponent says X, your side still wins because Y.",
         },
         {
             "area": "Logical consistency",
@@ -414,6 +464,13 @@ def metric_diagnostics(
             "status": score_status(scores["logic"]),
             "signal": f"{len(fallacies)} fallacy flag(s), average sentence length {scores['avg_sentence_length']} words",
             "meaning": "Measures overclaiming, absolute language, attacks, false choices, and readability pressure.",
+            "why": (
+                f"Earned {int(scores['logic'])}% after checking {len(fallacies)} fallacy flag(s), "
+                f"sentence length, qualifiers, and causal structure."
+            ),
+            "influencedBy": logic_excerpts,
+            "weakness": fallacies[0]["detail"] if fallacies else "No major fallacy pattern was detected; watch for unsupported leaps between premise and impact.",
+            "improve": "Narrow absolute wording, add missing conditions, and split dense claims into separate premise/evidence/warrant sentences.",
         },
     ]
 
@@ -639,7 +696,7 @@ def analyze_argument(argument: str, reply: str = "") -> dict[str, Any]:
     key_args = key_sentences(clean_argument)
     plan = improvement_plan(clean_argument, topic, scores, fallacies, sources)
     tips = recommendations(scores, fallacies, sources, plan)
-    diagnostics = metric_diagnostics(scores, fallacies, sources)
+    diagnostics = metric_diagnostics(clean_argument, scores, fallacies, sources)
     counters = counter_guidance(clean_argument, topic, scores)
     low_information = bool(scores.get("low_information"))
     if low_information:

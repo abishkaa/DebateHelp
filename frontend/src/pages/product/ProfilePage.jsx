@@ -9,7 +9,6 @@ import {
   Target,
   TrendingUp,
 } from 'lucide-react'
-import { achievements, progressMetrics } from '../../data/productData.js'
 import { productApi } from '../../services/productApi.js'
 import { prepareProfileImage, PROFILE_IMAGE_HELP } from '../../utils/profileImage.js'
 import { PanelHeading, PageHeading } from './OverviewPage.jsx'
@@ -32,8 +31,8 @@ function ProfilePage({ currentUser, token, updateProfile }) {
     profile_image_url: currentUser?.profile_image_url || '',
   })
   const initials = getInitials(form.full_name)
-  const metrics = dashboard?.metrics?.length ? dashboard.metrics.slice(0, 3) : progressMetrics.slice(0, 3)
-  const achievementData = dashboard?.achievements?.length ? dashboard.achievements : achievements
+  const metrics = dashboard?.metrics?.slice(0, 3) || []
+  const achievementData = dashboard?.achievements || []
   const earnedCount = achievementData.filter((achievement) => achievement.status === 'Earned').length
   const debateCount = Number.parseInt(
     metrics.find((metric) => metric.label === 'Debates completed')?.value?.replace(/,/g, '') || '0',
@@ -174,9 +173,15 @@ function ProfilePage({ currentUser, token, updateProfile }) {
       </section>
 
       <section className="profile-stat-grid">
-        {metrics.map((metric) => (
-          <article key={metric.label}><span>{metric.label}</span><strong>{metric.value}</strong><small>{metric.change}</small></article>
-        ))}
+        {metrics.length ? metrics.map((metric) => (
+            <article key={metric.label}><span>{metric.label}</span><strong>{metric.value}</strong><small>{metric.change}</small></article>
+          )) : (
+            <article className="profile-empty-stat">
+              <span>{syncingStats ? 'Syncing real profile stats' : 'No activity measured'}</span>
+              <strong>{syncingStats ? 'Loading' : 'No data'}</strong>
+              <small>{syncingStats ? 'Reading saved debate activity' : 'Analyze an argument to generate profile stats.'}</small>
+            </article>
+          )}
       </section>
 
       <section className="profile-layout">
@@ -225,24 +230,38 @@ function ProfilePage({ currentUser, token, updateProfile }) {
       </section>
 
       <section className="product-panel profile-achievements">
-        <PanelHeading title="Professional milestones" meta={`${earnedCount} earned - ${achievementData.length - earnedCount} in progress`} />
+        <PanelHeading
+          title="Professional milestones"
+          meta={syncingStats && !achievementData.length
+            ? 'Syncing real milestones'
+            : `${earnedCount} earned - ${achievementData.length - earnedCount} in progress`}
+        />
         <div>
-          {achievementData.map((achievement) => (
-            <article key={achievement.title}>
-              <span className={`achievement-symbol ${achievement.tone}`}><Award size={22} /></span>
-              <div>
-                <h3>{achievement.title}</h3>
-                <p>{achievement.description}</p>
-                <progress
-                  aria-label={`${achievement.title} progress`}
-                  className="score-progress"
-                  max="100"
-                  value={achievement.progress}
-                />
-              </div>
-              <strong>{achievement.status === 'Earned' ? <Check size={16} /> : <TrendingUp size={16} />}{achievement.status}</strong>
-            </article>
-          ))}
+          {achievementData.length ? achievementData.map((achievement) => (
+              <article key={achievement.title}>
+                <span className={`achievement-symbol ${achievement.tone}`}><Award size={22} /></span>
+                <div>
+                  <h3>{achievement.title}</h3>
+                  <p>{achievement.description}</p>
+                  <progress
+                    aria-label={`${achievement.title} progress`}
+                    className="score-progress"
+                    max="100"
+                    value={achievement.progress}
+                  />
+                </div>
+                <strong>{achievement.status === 'Earned' ? <Check size={16} /> : <TrendingUp size={16} />}{achievement.status}</strong>
+              </article>
+            )) : (
+              <article>
+                <span className="achievement-symbol amber"><Award size={22} /></span>
+                <div>
+                  <h3>{syncingStats ? 'Loading milestones' : 'No milestones yet'}</h3>
+                  <p>Profile milestones are generated from saved debates and analyzed arguments.</p>
+                </div>
+                <strong>{syncingStats ? 'Syncing' : 'No data'}</strong>
+              </article>
+            )}
         </div>
       </section>
     </div>

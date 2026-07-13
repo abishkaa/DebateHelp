@@ -117,6 +117,8 @@ function LiveDebatePage({ currentPath = '', currentUser }) {
 
   const transcript = room?.statements || []
   const hasScoredEntries = transcript.some((entry) => typeof entry.score === 'number')
+  const hasHostScore = transcript.some((entry) => entry.speakerKey === 'host' && typeof entry.score === 'number')
+  const hasOpponentScore = transcript.some((entry) => entry.speakerKey === 'opponent' && typeof entry.score === 'number')
   const speakerScores = room?.scores || computeSpeakerScores(transcript)
   const latestImprovementPlan = useMemo(() => getLatestImprovementPlan(transcript), [transcript])
   const latestStatement = useMemo(() => [...transcript].reverse().find((entry) => entry.status === 'Analyzed'), [transcript])
@@ -366,12 +368,12 @@ function LiveDebatePage({ currentPath = '', currentUser }) {
                   meta={hasScoredEntries ? 'From synced room turns' : room.status === 'running' ? 'Waiting for first turn' : 'Lobby mode'}
                 />
                 <div className="speaker-score-row">
-                  <span>{room.hostName}<strong>{speakerScores.host || 0}%</strong></span>
-                  <progress aria-label={`${room.hostName} score`} className="score-progress" max="100" value={speakerScores.host || 0} />
+                  <span>{room.hostName}<strong>{hasHostScore ? `${speakerScores.host || 0}%` : 'No data'}</strong></span>
+                  <progress aria-label={`${room.hostName} score`} className="score-progress" max="100" value={hasHostScore ? speakerScores.host || 0 : 0} />
                 </div>
                 <div className="speaker-score-row beta">
-                  <span>{room.opponentName || 'Opponent'}<strong>{speakerScores.opponent || 0}%</strong></span>
-                  <progress aria-label="Opponent score" className="score-progress" max="100" value={speakerScores.opponent || 0} />
+                  <span>{room.opponentName || 'Opponent'}<strong>{hasOpponentScore ? `${speakerScores.opponent || 0}%` : 'No data'}</strong></span>
+                  <progress aria-label="Opponent score" className="score-progress" max="100" value={hasOpponentScore ? speakerScores.opponent || 0 : 0} />
                 </div>
                 <div className="live-signal-list">
                   {buildLiveSignals(room).map((signal) => (

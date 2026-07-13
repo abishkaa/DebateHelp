@@ -149,6 +149,13 @@ class ProgressMetric(BaseModel):
     value: str
     change: str
     tone: str
+    detail: str = ""
+
+
+class DashboardInsightPublic(BaseModel):
+    title: str
+    detail: str
+    tone: str
 
 
 class DebateSessionPublic(BaseModel):
@@ -174,6 +181,7 @@ class DashboardResponse(BaseModel):
     progress_series: list[int]
     recent_sessions: list[DebateSessionPublic]
     achievements: list[AchievementPublic]
+    insights: list[DashboardInsightPublic] = Field(default_factory=list)
 
 
 class SessionHistoryResponse(BaseModel):
@@ -189,6 +197,7 @@ class ReportPublic(BaseModel):
     fallacies: list[str]
     counterarguments: list[str]
     improvementPlan: list[dict[str, Any]] = Field(default_factory=list)
+    diagnostics: list[dict[str, Any]] = Field(default_factory=list)
     sourceSessionId: str
 
 

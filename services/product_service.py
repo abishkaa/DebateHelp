@@ -550,6 +550,7 @@ async def build_session_report(
         "fallacies": risks,
         "counterarguments": counters,
         "improvementPlan": improvement_plan[:6],
+        "diagnostics": list(analysis.get("diagnostics") or [])[:5],
         "sourceSessionId": public_session_id,
     }
 
@@ -585,14 +586,70 @@ def build_dashboard(sessions: list[DebateSession | dict[str, Any]]) -> dict[str,
     score_total = sum(int(_value(session, "score")) for session in sessions)
     average = round(score_total / real_debates) if real_debates else 0
     streak = _current_streak_days(sessions)
+    now = datetime.now(timezone.utc)
+    sessions_last_7_days = sum(
+        1
+        for session in sessions
+        if (_value(session, "updated_at").astimezone(timezone.utc) if _value(session, "updated_at").tzinfo else _value(session, "updated_at").replace(tzinfo=timezone.utc))
+        >= now - timedelta(days=7)
+    )
 
     chronological = list(reversed(sessions))
     real_scores = [int(_value(session, "score")) for session in chronological]
     progress_series = real_scores[-26:]
+    first_score = real_scores[0] if real_scores else None
+    latest_score = real_scores[-1] if real_scores else None
+    improvement = latest_score - first_score if first_score is not None and latest_score is not None and len(real_scores) > 1 else None
+    strongest_session = max(sessions, key=lambda session: int(_value(session, "score")), default=None)
+    weakest_session = min(sessions, key=lambda session: int(_value(session, "score")), default=None)
     recent = []
     for index, session in enumerate(sessions[:10]):
         previous = int(_value(sessions[index + 1], "score")) if index + 1 < len(sessions) else None
         recent.append(serialize_session(session, previous))
+
+    if real_debates:
+        insights = [
+            {
+                "title": "Practice frequency",
+                "detail": f"{_plural(sessions_last_7_days, 'session')} saved in the last 7 days.",
+                "tone": "blue" if sessions_last_7_days else "amber",
+            },
+            {
+                "title": "Average improvement",
+                "detail": (
+                    f"{improvement:+d} points from first to latest saved score."
+                    if improvement is not None
+                    else "Need at least two saved sessions to calculate improvement."
+                ),
+                "tone": "green" if improvement and improvement > 0 else "amber",
+            },
+            {
+                "title": "Strongest saved topic",
+                "detail": (
+                    f"{_value(strongest_session, 'topic')} at {int(_value(strongest_session, 'score'))}%."
+                    if strongest_session is not None
+                    else "No strongest topic yet."
+                ),
+                "tone": "green",
+            },
+            {
+                "title": "Coaching priority",
+                "detail": (
+                    f"Review {_value(weakest_session, 'topic')} first; it is the lowest saved score at {int(_value(weakest_session, 'score'))}%."
+                    if weakest_session is not None
+                    else "No coaching priority yet."
+                ),
+                "tone": "red" if weakest_session is not None and int(_value(weakest_session, "score")) < 65 else "amber",
+            },
+        ]
+    else:
+        insights = [
+            {
+                "title": "No activity measured yet",
+                "detail": "Analyze your first argument to unlock real frequency, improvement, and coaching insights.",
+                "tone": "amber",
+            }
+        ]
 
     return {
         "metrics": [
@@ -601,24 +658,28 @@ def build_dashboard(sessions: list[DebateSession | dict[str, Any]]) -> dict[str,
                 "value": f"{real_debates:,}",
                 "change": "All time" if real_debates else "No sessions yet",
                 "tone": "blue",
+                "detail": "Number of saved debate-analysis sessions in your account.",
             },
             {
                 "label": "Arguments analyzed",
                 "value": f"{real_arguments:,}",
                 "change": "All time" if real_arguments else "No arguments yet",
                 "tone": "green",
+                "detail": "Total submitted argument entries counted from saved sessions.",
             },
             {
                 "label": "Avg. persuasiveness",
-                "value": f"{average}%",
+                "value": f"{average}%" if real_debates else "No data",
                 "change": f"Across {_plural(real_debates, 'session')}" if real_debates else "No score yet",
                 "tone": "amber",
+                "detail": "Mean score across saved sessions only.",
             },
             {
                 "label": "Current streak",
-                "value": _plural(streak, "day"),
+                "value": _plural(streak, "day") if streak else "No streak",
                 "change": "Active today" if streak else "No activity today",
                 "tone": "red",
+                "detail": "Consecutive calendar days with saved debate activity.",
             },
         ],
         "progress_series": progress_series,
@@ -646,4 +707,5 @@ def build_dashboard(sessions: list[DebateSession | dict[str, Any]]) -> dict[str,
                 "tone": "amber",
             },
         ],
+        "insights": insights,
     }
